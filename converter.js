@@ -10,7 +10,7 @@ class Stats {
 }
 
 class Pokemon {
-    constructor(species, ability, evs, ivs, nature, moveset, heldItem) {
+    constructor(species, ability, evs, ivs, nature, moveset, heldItem, aspects = null) {
         this.species = species;
         this.ability = ability;
         this.evs = evs;
@@ -18,31 +18,76 @@ class Pokemon {
         this.nature = nature;
         this.moveset = moveset;
         this.heldItem = heldItem;
+        if (aspects) {
+            this.aspects = aspects;
+        }
     }
 }
 
 const ShowdownConverter = {
+    // Regional variant mapping
+    REGIONAL_FORMS: {
+        'galar': 'galarian',
+        'alola': 'alolan',
+        'hisui': 'hisuian',
+        'paldea': 'paldean'
+    },
+
+    // Function to process species name and detect regional variants
+    processSpecies: function(speciesName) {
+        // Remove any spaces and convert to lowercase
+        const name = speciesName.trim().toLowerCase();
+        
+        // Check for regional variants
+        for (const [region, aspect] of Object.entries(this.REGIONAL_FORMS)) {
+            const suffix = `-${region}`;
+            if (name.endsWith(suffix)) {
+                return {
+                    species: name.slice(0, -suffix.length), // Remove the suffix
+                    aspects: [aspect]
+                };
+            }
+        }
+        
+        // No regional variant found
+        return {
+            species: name,
+            aspects: null
+        };
+    },
+
+    splitPokemonEntries: function(showdownText) {
+        return showdownText.split('\n\n').filter(entry => entry.trim());
+    },
+
     convert: function(showdownFormat) {
-        // Split input into lines and remove empty lines
+        const pokemonEntries = this.splitPokemonEntries(showdownFormat);
+        const convertedPokemon = pokemonEntries.map(entry => this.convertSingle(entry));
+        
+        return pokemonEntries.length === 1 
+            ? JSON.stringify(convertedPokemon[0], null, 2)
+            : JSON.stringify({
+                team: convertedPokemon
+              }, null, 2);
+    },
+
+    convertSingle: function(showdownFormat) {
         const lines = showdownFormat.split('\n').filter(line => line.trim());
         
-        // Parse species and item from first line
+        // Parse species, aspects, and item from first line
         const firstLine = lines[0].split('@');
-        const species = firstLine[0].trim().toLowerCase();
+        const { species, aspects } = this.processSpecies(firstLine[0]);
         const heldItem = firstLine.length > 1 
             ? firstLine[1].trim().toLowerCase().replace(/ /g, '_')
             : null;
         
-        // Initialize values
         let ability = '';
         let nature = '';
         const moves = [];
         
-        // Default stats
         const evs = new Stats(0, 0, 0, 0, 0, 0);
         const ivs = new Stats();
         
-        // Parse remaining lines
         lines.slice(1).forEach(line => {
             const trimmed = line.trim();
             
@@ -84,16 +129,15 @@ const ShowdownConverter = {
             }
         });
         
-        const pokemon = new Pokemon(
+        return new Pokemon(
             species,
             ability,
             evs,
             ivs,
             nature,
             moves,
-            heldItem
+            heldItem,
+            aspects
         );
-        
-        return JSON.stringify(pokemon, null, 2);
     }
 };
