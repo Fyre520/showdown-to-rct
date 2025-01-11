@@ -1,41 +1,148 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="light">
 <head>
     <title>Showdown to RCT Converter</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/kotlin/1.8.0/kotlin.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/kotlin/1.8.0/kotlin-stdlib.min.js"></script>
     <style>
+        /* First, we define our CSS variables for both themes */
+        :root[data-theme="light"] {
+            --background-color: #ffffff;
+            --text-color: #333333;
+            --textarea-bg: #ffffff;
+            --textarea-border: #cccccc;
+            --pre-background: #f5f5f5;
+            --button-bg: #4CAF50;
+            --button-hover: #45a049;
+        }
+
+        :root[data-theme="dark"] {
+            --background-color: #1a1a1a;
+            --text-color: #ffffff;
+            --textarea-bg: #2d2d2d;
+            --textarea-border: #404040;
+            --pre-background: #2d2d2d;
+            --button-bg: #2d5930;
+            --button-hover: #366c3a;
+        }
+
+        /* Now we apply these variables throughout our CSS */
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
         }
+
         textarea {
             width: 100%;
             height: 200px;
             margin: 10px 0;
             font-family: monospace;
+            background-color: var(--textarea-bg);
+            color: var(--text-color);
+            border: 1px solid var(--textarea-border);
+            padding: 10px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
         }
+
         button {
             padding: 10px 20px;
-            background-color: #4CAF50;
+            background-color: var(--button-bg);
             color: white;
             border: none;
             cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s ease;
         }
+
         button:hover {
-            background-color: #45a049;
+            background-color: var(--button-hover);
         }
+
         pre {
-            background-color: #f5f5f5;
+            background-color: var(--pre-background);
             padding: 15px;
             border-radius: 5px;
             overflow-x: auto;
+            transition: all 0.3s ease;
+        }
+
+        /* Theme toggle switch styling */
+        .theme-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2d5930;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .theme-icon {
+            font-size: 20px;
         }
     </style>
 </head>
 <body>
+    <!-- Theme toggle switch -->
+    <div class="theme-switch">
+        <span class="theme-icon">☀️</span>
+        <label class="switch">
+            <input type="checkbox" id="theme-toggle">
+            <span class="slider"></span>
+        </label>
+        <span class="theme-icon">🌙</span>
+    </div>
+
     <h1>Showdown to RCT Converter</h1>
     
     <div>
@@ -60,11 +167,28 @@ IVs: 29 HP / 27 Def / 29 SpA / 27 SpD / 24 Spe
 
     <script src="converter.js"></script>
     <script>
+        // Conversion function
         function convertFormat() {
             const input = document.getElementById('input').value;
             const output = ShowdownConverter.convert(input);
             document.getElementById('output').textContent = output;
         }
+
+        // Theme switching functionality
+        document.getElementById('theme-toggle').addEventListener('change', function(e) {
+            if (e.target.checked) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        document.getElementById('theme-toggle').checked = savedTheme === 'dark';
     </script>
 </body>
 </html>
