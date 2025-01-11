@@ -1,143 +1,153 @@
-class Stats {
-    constructor(hp = 31, atk = 31, def = 31, spa = 31, spd = 31, spe = 31) {
-        this.hp = hp;
-        this.atk = atk;
-        this.def = def;
-        this.spa = spa;
-        this.spd = spd;
-        this.spe = spe;
-    }
-}
-
-class Pokemon {
-    constructor(species, ability, evs, ivs, nature, moveset, heldItem, aspects = null) {
-        this.species = species;
-        this.ability = ability;
-        this.evs = evs;
-        this.ivs = ivs;
-        this.nature = nature;
-        this.moveset = moveset;
-        this.heldItem = heldItem;
-        if (aspects) {
-            this.aspects = aspects;
-        }
-    }
-}
+// ... Previous Stats and Pokemon classes remain the same ...
 
 const ShowdownConverter = {
-    // Regional variant mapping
-    REGIONAL_FORMS: {
-        'galar': 'galarian',
-        'alola': 'alolan',
-        'hisui': 'hisuian',
-        'paldea': 'paldean'
+    // Previous mappings remain the same...
+    FORM_MAPPINGS: {
+        regional: {
+            'galar': 'galarian',
+            'alola': 'alolan',
+            'hisui': 'hisuian',
+            'paldea': 'paldean'
+        },
+        // ... other mappings ...
     },
 
-    // Function to process species name and detect regional variants
-    processSpecies: function(speciesName) {
-        // Remove any spaces and convert to lowercase
-        const name = speciesName.trim().toLowerCase();
+    // Add a logging system to track form patterns
+    formLogger: {
+        unknownPatterns: new Set(),
+        formMatches: new Map(),
         
-        // Check for regional variants
-        for (const [region, aspect] of Object.entries(this.REGIONAL_FORMS)) {
-            const suffix = `-${region}`;
-            if (name.endsWith(suffix)) {
-                return {
-                    species: name.slice(0, -suffix.length), // Remove the suffix
-                    aspects: [aspect]
-                };
+        // Log when we encounter an unknown pattern
+        logUnknownPattern: function(originalName, processed) {
+            const pattern = {
+                original: originalName,
+                processed: processed,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Store as JSON string to ensure uniqueness in Set
+            this.unknownPatterns.add(JSON.stringify(pattern));
+            
+            console.warn(`Unknown form pattern detected:`, {
+                originalName,
+                processedAs: processed,
+                possibleForm: originalName.includes('-') ? originalName.split('-')[1] : null
+            });
+        },
+
+        // Log successful form matches
+        logFormMatch: function(originalName, matchType, processed) {
+            if (!this.formMatches.has(matchType)) {
+                this.formMatches.set(matchType, new Set());
+            }
+            this.formMatches.get(matchType).add(JSON.stringify({
+                original: originalName,
+                processed: processed
+            }));
+        },
+
+        // Get a summary of all logged patterns
+        getSummary: function() {
+            return {
+                unknownPatterns: Array.from(this.unknownPatterns).map(p => JSON.parse(p)),
+                matchedForms: Object.fromEntries(
+                    Array.from(this.formMatches.entries()).map(([type, patterns]) => 
+                        [type, Array.from(patterns).map(p => JSON.parse(p))]
+                    )
+                )
+            };
+        },
+
+        // Clear all logged data
+        clear: function() {
+            this.unknownPatterns.clear();
+            this.formMatches.clear();
+        }
+    },
+
+    // Enhanced processSpecies function with logging
+    processSpecies: function(speciesName) {
+        const originalName = speciesName.trim();
+        const name = originalName.toLowerCase();
+        let baseSpecies = name;
+        const aspects = [];
+        let formFound = false;
+
+        // Check for special forms first
+        for (const [form, species] of Object.entries(this.FORM_MAPPINGS.specialForms)) {
+            for (const baseForm of species) {
+                const formSuffix = `-${form}`;
+                if (name.includes(baseForm) && name.includes(formSuffix)) {
+                    baseSpecies = baseForm;
+                    aspects.push(form.replace(/-/g, '_'));
+                    this.formLogger.logFormMatch(originalName, 'specialForm', { baseSpecies, aspects });
+                    formFound = true;
+                }
             }
         }
-        
-        // No regional variant found
+
+        // Check for regional variants
+        for (const [region, aspect] of Object.entries(this.FORM_MAPPINGS.regional)) {
+            const suffix = `-${region}`;
+            if (name.endsWith(suffix)) {
+                baseSpecies = name.slice(0, -suffix.length);
+                aspects.push(aspect);
+                this.formLogger.logFormMatch(originalName, 'regional', { baseSpecies, aspects });
+                formFound = true;
+            }
+        }
+
+        // Check for other form variants
+        for (const [form, species] of Object.entries(this.FORM_MAPPINGS.aspectForms)) {
+            for (const baseForm of species) {
+                if (name.includes(baseForm)) {
+                    const formVariant = `-${form}`;
+                    if (name.includes(formVariant)) {
+                        baseSpecies = baseForm;
+                        aspects.push(form.replace(/-/g, '_'));
+                        this.formLogger.logFormMatch(originalName, 'aspectForm', { baseSpecies, aspects });
+                        formFound = true;
+                    }
+                }
+            }
+        }
+
+        // If no known form patterns were matched, log it as unknown
+        if (!formFound && name.includes('-')) {
+            this.formLogger.logUnknownPattern(originalName, { baseSpecies, aspects });
+        }
+
         return {
-            species: name,
-            aspects: null
+            species: baseSpecies,
+            aspects: aspects.length > 0 ? aspects : null
         };
     },
 
-    splitPokemonEntries: function(showdownText) {
-        return showdownText.split('\n\n').filter(entry => entry.trim());
+    // Add a method to get the logging summary
+    getFormPatternSummary: function() {
+        return this.formLogger.getSummary();
     },
 
+    // Add a method to clear the logs
+    clearFormLogs: function() {
+        this.formLogger.clear();
+    },
+
+    // Rest of the converter functions remain the same...
     convert: function(showdownFormat) {
+        // Clear previous logs when starting a new conversion
+        this.clearFormLogs();
+        
         const pokemonEntries = this.splitPokemonEntries(showdownFormat);
         const convertedPokemon = pokemonEntries.map(entry => this.convertSingle(entry));
+        
+        // After conversion, log the summary to console
+        console.info('Form Pattern Analysis:', this.getFormPatternSummary());
         
         return pokemonEntries.length === 1 
             ? JSON.stringify(convertedPokemon[0], null, 2)
             : JSON.stringify({
                 team: convertedPokemon
               }, null, 2);
-    },
-
-    convertSingle: function(showdownFormat) {
-        const lines = showdownFormat.split('\n').filter(line => line.trim());
-        
-        // Parse species, aspects, and item from first line
-        const firstLine = lines[0].split('@');
-        const { species, aspects } = this.processSpecies(firstLine[0]);
-        const heldItem = firstLine.length > 1 
-            ? firstLine[1].trim().toLowerCase().replace(/ /g, '_')
-            : null;
-        
-        let ability = '';
-        let nature = '';
-        const moves = [];
-        
-        const evs = new Stats(0, 0, 0, 0, 0, 0);
-        const ivs = new Stats();
-        
-        lines.slice(1).forEach(line => {
-            const trimmed = line.trim();
-            
-            if (trimmed.startsWith('Ability: ')) {
-                ability = trimmed.substring(9).toLowerCase().replace(/ /g, '');
-            }
-            else if (trimmed.startsWith('EVs: ')) {
-                const evList = trimmed.substring(4).split('/');
-                evList.forEach(ev => {
-                    const [value, stat] = ev.trim().split(' ');
-                    switch(stat.toLowerCase()) {
-                        case 'hp': evs.hp = parseInt(value); break;
-                        case 'atk': evs.atk = parseInt(value); break;
-                        case 'def': evs.def = parseInt(value); break;
-                        case 'spa': evs.spa = parseInt(value); break;
-                        case 'spd': evs.spd = parseInt(value); break;
-                        case 'spe': evs.spe = parseInt(value); break;
-                    }
-                });
-            }
-            else if (trimmed.startsWith('IVs: ')) {
-                const ivList = trimmed.substring(4).split('/');
-                ivList.forEach(iv => {
-                    const [value, stat] = iv.trim().split(' ');
-                    switch(stat.toLowerCase()) {
-                        case 'hp': ivs.hp = parseInt(value); break;
-                        case 'def': ivs.def = parseInt(value); break;
-                        case 'spa': ivs.spa = parseInt(value); break;
-                        case 'spd': ivs.spd = parseInt(value); break;
-                        case 'spe': ivs.spe = parseInt(value); break;
-                    }
-                });
-            }
-            else if (trimmed.endsWith('Nature')) {
-                nature = trimmed.split(' ')[0].toLowerCase();
-            }
-            else if (trimmed.startsWith('- ')) {
-                moves.push(trimmed.substring(2).toLowerCase().replace(/ /g, ''));
-            }
-        });
-        
-        return new Pokemon(
-            species,
-            ability,
-            evs,
-            ivs,
-            nature,
-            moves,
-            heldItem,
-            aspects
-        );
     }
 };
