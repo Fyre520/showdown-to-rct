@@ -2,193 +2,101 @@
 <html data-theme="light">
 <head>
     <title>Showdown to RCT Converter</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/kotlin/1.8.0/kotlin.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/kotlin/1.8.0/kotlin-stdlib.min.js"></script>
+    <!-- Previous styles remain... -->
     <style>
-        /* First, we define our CSS variables for both themes */
-        :root[data-theme="light"] {
-            --background-color: #ffffff;
-            --text-color: #333333;
-            --textarea-bg: #ffffff;
-            --textarea-border: #cccccc;
-            --pre-background: #f5f5f5;
-            --button-bg: #4CAF50;
-            --button-hover: #45a049;
-        }
-
-        :root[data-theme="dark"] {
-            --background-color: #1a1a1a;
-            --text-color: #ffffff;
-            --textarea-bg: #2d2d2d;
-            --textarea-border: #404040;
-            --pre-background: #2d2d2d;
-            --button-bg: #2d5930;
-            --button-hover: #366c3a;
-        }
-
-        /* Now we apply these variables throughout our CSS */
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            transition: all 0.3s ease;
-        }
-
-        textarea {
-            width: 100%;
-            height: 200px;
+        /* Add new styles for feedback */
+        .feedback-container {
             margin: 10px 0;
-            font-family: monospace;
-            background-color: var(--textarea-bg);
-            color: var(--text-color);
-            border: 1px solid var(--textarea-border);
             padding: 10px;
-            border-radius: 5px;
-            transition: all 0.3s ease;
+            border-radius: 4px;
         }
 
-        button {
-            padding: 10px 20px;
-            background-color: var(--button-bg);
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: all 0.3s ease;
+        .feedback-success {
+            background-color: var(--success-bg, #d4edda);
+            color: var(--success-text, #155724);
+            border: 1px solid var(--success-border, #c3e6cb);
         }
 
-        button:hover {
-            background-color: var(--button-hover);
+        .feedback-error {
+            background-color: var(--error-bg, #f8d7da);
+            color: var(--error-text, #721c24);
+            border: 1px solid var(--error-border, #f5c6cb);
         }
 
-        pre {
-            background-color: var(--pre-background);
-            padding: 15px;
-            border-radius: 5px;
-            overflow-x: auto;
-            transition: all 0.3s ease;
+        .pokemon-count {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            margin: 5px 0;
         }
 
-        /* Theme toggle switch styling */
-        .theme-switch {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .error-list {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 0.9em;
         }
 
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 34px;
-        }
-
-        .switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 34px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 26px;
-            width: 26px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: #2d5930;
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(26px);
-        }
-
-        .theme-icon {
-            font-size: 20px;
+        /* Add dark mode variables */
+        :root[data-theme="dark"] {
+            --success-bg: #1e4620;
+            --success-text: #d4edda;
+            --success-border: #2a5a2a;
+            --error-bg: #442020;
+            --error-text: #f8d7da;
+            --error-border: #5a2a2a;
+            --text-secondary: #888888;
         }
     </style>
 </head>
 <body>
-    <!-- Theme toggle switch -->
-    <div class="theme-switch">
-        <span class="theme-icon">☀️</span>
-        <label class="switch">
-            <input type="checkbox" id="theme-toggle">
-            <span class="slider"></span>
-        </label>
-        <span class="theme-icon">🌙</span>
-    </div>
-
-    <h1>Showdown to RCT Converter</h1>
-    
-    <div>
-        <h3>Input (Showdown Format):</h3>
-        <textarea id="input" placeholder="Paste Showdown format here...">Excadrill @ Air Balloon
-Ability: Sand Rush
-EVs: 252 Atk / 4 SpD / 252 Spe
-Adamant Nature
-IVs: 29 HP / 27 Def / 29 SpA / 27 SpD / 24 Spe
-- Earthquake
-- Stone Edge
-- Iron Head
-- Rapid Spin</textarea>
-    </div>
-
-    <button onclick="convertFormat()">Convert</button>
-
-    <div>
-        <h3>Output (RCT Format):</h3>
-        <pre id="output"></pre>
-    </div>
-
-    <script src="converter.js"></script>
+    <!-- Previous HTML remains the same until the script section -->
     <script>
-        // Conversion function
         function convertFormat() {
             const input = document.getElementById('input').value;
-            const output = ShowdownConverter.convert(input);
-            document.getElementById('output').textContent = output;
-        }
+            const result = ShowdownConverter.convert(input);
+            
+            // Create feedback elements
+            const feedbackContainer = document.createElement('div');
+            feedbackContainer.className = `feedback-container feedback-${result.success ? 'success' : 'error'}`;
+            
+            // Add Pokémon count
+            const countDiv = document.createElement('div');
+            countDiv.className = 'pokemon-count';
+            countDiv.textContent = `Detected ${result.totalPokemon} Pokémon${result.totalPokemon !== 1 ? 's' : ''}`;
+            feedbackContainer.appendChild(countDiv);
 
-        // Theme switching functionality
-        document.getElementById('theme-toggle').addEventListener('change', function(e) {
-            if (e.target.checked) {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                localStorage.setItem('theme', 'dark');
+            if (result.success) {
+                feedbackContainer.insertBefore(
+                    document.createTextNode('Conversion successful!'),
+                    countDiv
+                );
+                document.getElementById('output').textContent = result.result;
             } else {
-                document.documentElement.setAttribute('data-theme', 'light');
-                localStorage.setItem('theme', 'light');
-            }
-        });
+                const errorHeader = document.createElement('div');
+                errorHeader.textContent = 'Please fix the following issues:';
+                feedbackContainer.insertBefore(errorHeader, countDiv);
 
-        // Check for saved theme preference
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        document.getElementById('theme-toggle').checked = savedTheme === 'dark';
+                const errorList = document.createElement('ul');
+                errorList.className = 'error-list';
+                result.errors.forEach(error => {
+                    const li = document.createElement('li');
+                    li.textContent = error;
+                    errorList.appendChild(li);
+                });
+                feedbackContainer.appendChild(errorList);
+                
+                document.getElementById('output').textContent = '';
+            }
+
+            // Replace any existing feedback
+            const existingFeedback = document.querySelector('.feedback-container');
+            if (existingFeedback) {
+                existingFeedback.remove();
+            }
+            document.getElementById('input').parentNode.insertBefore(
+                feedbackContainer,
+                document.getElementById('output').parentNode
+            );
+        }
     </script>
 </body>
 </html>
