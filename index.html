@@ -3,6 +3,7 @@
 <head>
     <title>Showdown to RCT Converter</title>
     <style>
+        /* Theme variables for light mode */
         :root[data-theme="light"] {
             --background-color: #ffffff;
             --text-color: #333333;
@@ -12,8 +13,11 @@
             --button-bg: #4CAF50;
             --button-hover: #45a049;
             --card-bg: #f8f9fa;
+            --switch-bg: #ccc;
+            --switch-checked: #2d5930;
         }
 
+        /* Theme variables for dark mode */
         :root[data-theme="dark"] {
             --background-color: #1a1a1a;
             --text-color: #ffffff;
@@ -23,8 +27,11 @@
             --button-bg: #2d5930;
             --button-hover: #366c3a;
             --card-bg: #333333;
+            --switch-bg: #666;
+            --switch-checked: #4CAF50;
         }
 
+        /* Core styles with theme variables */
         body {
             font-family: Arial, sans-serif;
             max-width: 1200px;
@@ -102,8 +109,10 @@
             border-radius: 5px;
             overflow-x: auto;
             margin-top: 20px;
+            color: var(--text-color);
         }
 
+        /* Theme switch styling */
         .theme-switch {
             position: absolute;
             top: 20px;
@@ -111,6 +120,51 @@
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--switch-bg);
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--switch-checked);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
         }
 
         .warning {
@@ -199,5 +253,43 @@
 
     <script src="trainer-presets.js"></script>
     <script src="converter.js"></script>
+    <script>
+        // Theme management
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            document.getElementById('theme-toggle').checked = savedTheme === 'dark';
+        }
+
+        document.getElementById('theme-toggle').addEventListener('change', function(e) {
+            const newTheme = e.target.checked ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // Format conversion
+        function convertFormat() {
+            const input = document.getElementById('input').value;
+            const trainerConfig = {
+                name: document.getElementById('trainer-name').value,
+                aiMargin: document.getElementById('ai-margin').value,
+                battleFormat: document.getElementById('battle-format').value,
+                maxItems: document.getElementById('max-items').value,
+                itemType: document.getElementById('item-type').value,
+                itemQuantity: document.getElementById('item-quantity').value
+            };
+
+            const result = ShowdownConverter.convert(input, trainerConfig);
+            
+            if (result.success) {
+                document.getElementById('output').textContent = result.result;
+            } else {
+                document.getElementById('output').textContent = 'Error: ' + result.error;
+            }
+        }
+
+        // Initialize theme when page loads
+        document.addEventListener('DOMContentLoaded', initializeTheme);
+    </script>
 </body>
 </html>
