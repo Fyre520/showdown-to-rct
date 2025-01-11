@@ -2,101 +2,202 @@
 <html data-theme="light">
 <head>
     <title>Showdown to RCT Converter</title>
-    <!-- Previous styles remain... -->
     <style>
-        /* Add new styles for feedback */
-        .feedback-container {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 4px;
+        :root[data-theme="light"] {
+            --background-color: #ffffff;
+            --text-color: #333333;
+            --textarea-bg: #ffffff;
+            --textarea-border: #cccccc;
+            --pre-background: #f5f5f5;
+            --button-bg: #4CAF50;
+            --button-hover: #45a049;
+            --card-bg: #f8f9fa;
         }
 
-        .feedback-success {
-            background-color: var(--success-bg, #d4edda);
-            color: var(--success-text, #155724);
-            border: 1px solid var(--success-border, #c3e6cb);
-        }
-
-        .feedback-error {
-            background-color: var(--error-bg, #f8d7da);
-            color: var(--error-text, #721c24);
-            border: 1px solid var(--error-border, #f5c6cb);
-        }
-
-        .pokemon-count {
-            font-size: 0.9em;
-            color: var(--text-secondary);
-            margin: 5px 0;
-        }
-
-        .error-list {
-            margin: 0;
-            padding-left: 20px;
-            font-size: 0.9em;
-        }
-
-        /* Add dark mode variables */
         :root[data-theme="dark"] {
-            --success-bg: #1e4620;
-            --success-text: #d4edda;
-            --success-border: #2a5a2a;
-            --error-bg: #442020;
-            --error-text: #f8d7da;
-            --error-border: #5a2a2a;
-            --text-secondary: #888888;
+            --background-color: #1a1a1a;
+            --text-color: #ffffff;
+            --textarea-bg: #2d2d2d;
+            --textarea-border: #404040;
+            --pre-background: #2d2d2d;
+            --button-bg: #2d5930;
+            --button-hover: #366c3a;
+            --card-bg: #333333;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 300px;
+            margin: 10px 0;
+            font-family: monospace;
+            padding: 10px;
+            background-color: var(--textarea-bg);
+            color: var(--text-color);
+            border: 1px solid var(--textarea-border);
+            border-radius: 5px;
+        }
+
+        .trainer-config {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 5px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--textarea-border);
+            border-radius: 4px;
+            background-color: var(--textarea-bg);
+            color: var(--text-color);
+        }
+
+        input[type="number"] {
+            width: 80px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: var(--button-bg);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: var(--button-hover);
+        }
+
+        pre {
+            background-color: var(--pre-background);
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        .theme-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .warning {
+            color: #ff6b6b;
+            font-size: 0.9em;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
-    <!-- Previous HTML remains the same until the script section -->
-    <script>
-        function convertFormat() {
-            const input = document.getElementById('input').value;
-            const result = ShowdownConverter.convert(input);
+    <div class="theme-switch">
+        <span>☀️</span>
+        <label class="switch">
+            <input type="checkbox" id="theme-toggle">
+            <span class="slider"></span>
+        </label>
+        <span>🌙</span>
+    </div>
+
+    <h1>Showdown to RCT Converter</h1>
+
+    <div class="layout">
+        <div>
+            <h3>Input (Showdown Format):</h3>
+            <textarea id="input" placeholder="Paste Showdown format here..."></textarea>
+        </div>
+
+        <div class="trainer-config">
+            <h3>Trainer Configuration</h3>
             
-            // Create feedback elements
-            const feedbackContainer = document.createElement('div');
-            feedbackContainer.className = `feedback-container feedback-${result.success ? 'success' : 'error'}`;
-            
-            // Add Pokémon count
-            const countDiv = document.createElement('div');
-            countDiv.className = 'pokemon-count';
-            countDiv.textContent = `Detected ${result.totalPokemon} Pokémon${result.totalPokemon !== 1 ? 's' : ''}`;
-            feedbackContainer.appendChild(countDiv);
+            <div class="form-group">
+                <label for="preset">Trainer Preset</label>
+                <select id="preset" onchange="loadPreset()">
+                    <option value="">Custom Configuration</option>
+                    <option value="gym">Gym Leader</option>
+                    <option value="elite">Elite Four</option>
+                    <option value="ace">Ace Trainer</option>
+                    <option value="rival">Rival</option>
+                </select>
+            </div>
 
-            if (result.success) {
-                feedbackContainer.insertBefore(
-                    document.createTextNode('Conversion successful!'),
-                    countDiv
-                );
-                document.getElementById('output').textContent = result.result;
-            } else {
-                const errorHeader = document.createElement('div');
-                errorHeader.textContent = 'Please fix the following issues:';
-                feedbackContainer.insertBefore(errorHeader, countDiv);
+            <div class="form-group">
+                <label for="trainer-name">Trainer Name</label>
+                <input type="text" id="trainer-name" placeholder="Enter name">
+            </div>
 
-                const errorList = document.createElement('ul');
-                errorList.className = 'error-list';
-                result.errors.forEach(error => {
-                    const li = document.createElement('li');
-                    li.textContent = error;
-                    errorList.appendChild(li);
-                });
-                feedbackContainer.appendChild(errorList);
-                
-                document.getElementById('output').textContent = '';
-            }
+            <div class="form-group">
+                <label for="ai-margin">AI Difficulty</label>
+                <input type="number" id="ai-margin" value="0.15" step="0.05" min="0" max="1">
+                <div class="warning" id="ai-warning"></div>
+            </div>
 
-            // Replace any existing feedback
-            const existingFeedback = document.querySelector('.feedback-container');
-            if (existingFeedback) {
-                existingFeedback.remove();
-            }
-            document.getElementById('input').parentNode.insertBefore(
-                feedbackContainer,
-                document.getElementById('output').parentNode
-            );
-        }
-    </script>
+            <div class="form-group">
+                <label for="battle-format">Battle Format</label>
+                <select id="battle-format">
+                    <option value="">Singles (Default)</option>
+                    <option value="GEN_9_SINGLES">Gen 9 Singles</option>
+                    <option value="GEN_9_DOUBLES">Gen 9 Doubles</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="max-items">Max Item Uses</label>
+                <input type="number" id="max-items" value="2" min="0" max="10">
+            </div>
+
+            <div class="form-group">
+                <label for="item-type">Held Items</label>
+                <select id="item-type">
+                    <option value="cobblemon:full_restore">Full Restore</option>
+                    <option value="cobblemon:hyper_potion">Hyper Potion</option>
+                    <option value="cobblemon:max_potion">Max Potion</option>
+                    <option value="cobblemon:potion">Potion</option>
+                </select>
+                <input type="number" id="item-quantity" value="2" min="1" max="99" style="margin-top: 5px;">
+            </div>
+        </div>
+    </div>
+
+    <button onclick="convertFormat()">Convert</button>
+
+    <div>
+        <h3>Output (RCT Format):</h3>
+        <pre id="output"></pre>
+    </div>
+
+    <script src="trainer-presets.js"></script>
+    <script src="converter.js"></script>
 </body>
 </html>
