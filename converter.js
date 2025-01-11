@@ -1,153 +1,113 @@
-// ... Previous Stats and Pokemon classes remain the same ...
+class ShowdownValidator {
+    static validatePokemon(pokemonText) {
+        // Verify basic structure
+        const lines = pokemonText.trim().split('\n');
+        const errors = [];
 
-const ShowdownConverter = {
-    // Previous mappings remain the same...
-    FORM_MAPPINGS: {
-        regional: {
-            'galar': 'galarian',
-            'alola': 'alolan',
-            'hisui': 'hisuian',
-            'paldea': 'paldean'
-        },
-        // ... other mappings ...
-    },
-
-    // Add a logging system to track form patterns
-    formLogger: {
-        unknownPatterns: new Set(),
-        formMatches: new Map(),
-        
-        // Log when we encounter an unknown pattern
-        logUnknownPattern: function(originalName, processed) {
-            const pattern = {
-                original: originalName,
-                processed: processed,
-                timestamp: new Date().toISOString()
-            };
-            
-            // Store as JSON string to ensure uniqueness in Set
-            this.unknownPatterns.add(JSON.stringify(pattern));
-            
-            console.warn(`Unknown form pattern detected:`, {
-                originalName,
-                processedAs: processed,
-                possibleForm: originalName.includes('-') ? originalName.split('-')[1] : null
-            });
-        },
-
-        // Log successful form matches
-        logFormMatch: function(originalName, matchType, processed) {
-            if (!this.formMatches.has(matchType)) {
-                this.formMatches.set(matchType, new Set());
-            }
-            this.formMatches.get(matchType).add(JSON.stringify({
-                original: originalName,
-                processed: processed
-            }));
-        },
-
-        // Get a summary of all logged patterns
-        getSummary: function() {
-            return {
-                unknownPatterns: Array.from(this.unknownPatterns).map(p => JSON.parse(p)),
-                matchedForms: Object.fromEntries(
-                    Array.from(this.formMatches.entries()).map(([type, patterns]) => 
-                        [type, Array.from(patterns).map(p => JSON.parse(p))]
-                    )
-                )
-            };
-        },
-
-        // Clear all logged data
-        clear: function() {
-            this.unknownPatterns.clear();
-            this.formMatches.clear();
-        }
-    },
-
-    // Enhanced processSpecies function with logging
-    processSpecies: function(speciesName) {
-        const originalName = speciesName.trim();
-        const name = originalName.toLowerCase();
-        let baseSpecies = name;
-        const aspects = [];
-        let formFound = false;
-
-        // Check for special forms first
-        for (const [form, species] of Object.entries(this.FORM_MAPPINGS.specialForms)) {
-            for (const baseForm of species) {
-                const formSuffix = `-${form}`;
-                if (name.includes(baseForm) && name.includes(formSuffix)) {
-                    baseSpecies = baseForm;
-                    aspects.push(form.replace(/-/g, '_'));
-                    this.formLogger.logFormMatch(originalName, 'specialForm', { baseSpecies, aspects });
-                    formFound = true;
-                }
-            }
+        // Check first line (species and item)
+        if (!lines[0].match(/^[A-Za-z\-]+(-[A-Za-z]+)*(\s*@\s*[A-Za-z\s]+)?$/)) {
+            errors.push('First line should contain Pokémon species and optionally an item');
         }
 
-        // Check for regional variants
-        for (const [region, aspect] of Object.entries(this.FORM_MAPPINGS.regional)) {
-            const suffix = `-${region}`;
-            if (name.endsWith(suffix)) {
-                baseSpecies = name.slice(0, -suffix.length);
-                aspects.push(aspect);
-                this.formLogger.logFormMatch(originalName, 'regional', { baseSpecies, aspects });
-                formFound = true;
-            }
-        }
+        // Check for required elements
+        const hasAbility = lines.some(line => line.startsWith('Ability:'));
+        const hasNature = lines.some(line => line.endsWith('Nature'));
+        const hasMoves = lines.filter(line => line.startsWith('- ')).length;
 
-        // Check for other form variants
-        for (const [form, species] of Object.entries(this.FORM_MAPPINGS.aspectForms)) {
-            for (const baseForm of species) {
-                if (name.includes(baseForm)) {
-                    const formVariant = `-${form}`;
-                    if (name.includes(formVariant)) {
-                        baseSpecies = baseForm;
-                        aspects.push(form.replace(/-/g, '_'));
-                        this.formLogger.logFormMatch(originalName, 'aspectForm', { baseSpecies, aspects });
-                        formFound = true;
-                    }
-                }
-            }
-        }
-
-        // If no known form patterns were matched, log it as unknown
-        if (!formFound && name.includes('-')) {
-            this.formLogger.logUnknownPattern(originalName, { baseSpecies, aspects });
-        }
+        if (!hasAbility) errors.push('Missing ability');
+        if (!hasNature) errors.push('Missing nature');
+        if (hasMoves === 0) errors.push('Missing moves');
+        if (hasMoves > 4) errors.push('Too many moves (maximum 4)');
 
         return {
-            species: baseSpecies,
-            aspects: aspects.length > 0 ? aspects : null
+            isValid: errors.length === 0,
+            errors: errors
+        };
+    }
+
+    static validateTeam(teamText) {
+        // Split into individual Pokémon entries
+        const entries = teamText.split('\n\n').filter(entry => entry.trim());
+        const teamErrors = [];
+        let totalPokemon = 0;
+
+        // Check each Pokémon entry
+        entries.forEach((entry, index) => {
+            if (entry.trim()) {
+                totalPokemon++;
+                const validation = this.validatePokemon(entry);
+                if (!validation.isValid) {
+                    teamErrors.push(`Pokémon #${index + 1} has errors: ${validation.errors.join(', ')}`);
+                }
+            }
+        });
+
+        return {
+            isValid: teamErrors.length === 0,
+            totalPokemon,
+            errors: teamErrors
+        };
+    }
+}
+
+const ShowdownConverter = {
+    // Previous code remains the same...
+
+    // Enhanced conversion with validation and feedback
+    convert: function(showdownFormat) {
+        // Clear previous logs
+        this.clearFormLogs();
+
+        // First, validate and standardize the input
+        const standardizedInput = this.standardizeInput(showdownFormat);
+        const validation = ShowdownValidator.validateTeam(standardizedInput);
+
+        // If validation fails, return the errors
+        if (!validation.isValid) {
+            return {
+                success: false,
+                errors: validation.errors,
+                totalPokemon: validation.totalPokemon
+            };
+        }
+
+        // Process the valid input
+        const pokemonEntries = this.splitPokemonEntries(standardizedInput);
+        const convertedPokemon = pokemonEntries.map(entry => this.convertSingle(entry));
+        
+        // Generate the appropriate output format
+        const output = pokemonEntries.length === 1 
+            ? convertedPokemon[0]
+            : { team: convertedPokemon };
+
+        // Return success result with metadata
+        return {
+            success: true,
+            totalPokemon: validation.totalPokemon,
+            formAnalysis: this.getFormPatternSummary(),
+            result: JSON.stringify(output, null, 2)
         };
     },
 
-    // Add a method to get the logging summary
-    getFormPatternSummary: function() {
-        return this.formLogger.getSummary();
-    },
-
-    // Add a method to clear the logs
-    clearFormLogs: function() {
-        this.formLogger.clear();
-    },
-
-    // Rest of the converter functions remain the same...
-    convert: function(showdownFormat) {
-        // Clear previous logs when starting a new conversion
-        this.clearFormLogs();
-        
-        const pokemonEntries = this.splitPokemonEntries(showdownFormat);
-        const convertedPokemon = pokemonEntries.map(entry => this.convertSingle(entry));
-        
-        // After conversion, log the summary to console
-        console.info('Form Pattern Analysis:', this.getFormPatternSummary());
-        
-        return pokemonEntries.length === 1 
-            ? JSON.stringify(convertedPokemon[0], null, 2)
-            : JSON.stringify({
-                team: convertedPokemon
-              }, null, 2);
+    // New method to standardize input formatting
+    standardizeInput: function(input) {
+        return input
+            // Normalize line endings
+            .replace(/\r\n/g, '\n')
+            // Remove extra blank lines
+            .replace(/\n{3,}/g, '\n\n')
+            // Ensure exactly one blank line between entries
+            .split('\n\n')
+            .filter(entry => entry.trim())
+            .join('\n\n')
+            // Trim whitespace while preserving indentation of moves
+            .split('\n')
+            .map(line => {
+                if (line.startsWith('- ')) {
+                    return line.trimEnd();
+                }
+                return line.trim();
+            })
+            .join('\n');
     }
 };
