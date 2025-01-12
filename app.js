@@ -19,7 +19,7 @@ class App {
 
         // Preset selection handler
         document.getElementById('preset').addEventListener('change', (e) => {
-            TrainerPresets.loadPreset(e.target.value);
+            loadPreset();
         });
 
         // Convert button handler
@@ -39,31 +39,25 @@ class App {
     }
 
     initializeGenderTooltips() {
-        // Add tooltip information about gender handling
-        const tooltipInfo = {
-            'genderless': 'Automatically detected for species like Porygon, Magnemite, etc.',
-            'gender-specific': 'Automatically set for species with fixed genders',
-            'random': 'Used when no specific gender is provided'
-        };
-
-        // Create tooltip elements (implementation depends on your UI framework)
-        this.createTooltipElements(tooltipInfo);
+        const tooltipDiv = document.querySelector('.gender-info-tooltip');
+        if (tooltipDiv) {
+            tooltipDiv.addEventListener('mouseover', () => {
+                clearTimeout(this.tooltipTimer);
+            });
+            
+            tooltipDiv.addEventListener('mouseleave', () => {
+                this.hideTooltipWithDelay();
+            });
+        }
     }
 
-    createTooltipElements(tooltipInfo) {
-        const outputSection = document.querySelector('.output-section');
-        const tooltipDiv = document.createElement('div');
-        tooltipDiv.className = 'gender-info-tooltip';
-        tooltipDiv.style.display = 'none';
-        
-        let tooltipContent = '<h4>Gender Handling:</h4><ul>';
-        for (const [key, value] of Object.entries(tooltipInfo)) {
-            tooltipContent += `<li><strong>${key}:</strong> ${value}</li>`;
-        }
-        tooltipContent += '</ul>';
-        
-        tooltipDiv.innerHTML = tooltipContent;
-        outputSection.appendChild(tooltipDiv);
+    hideTooltipWithDelay() {
+        this.tooltipTimer = setTimeout(() => {
+            const tooltipDiv = document.querySelector('.gender-info-tooltip');
+            if (tooltipDiv) {
+                tooltipDiv.style.display = 'none';
+            }
+        }, 3000);
     }
 
     validateInput(input) {
@@ -77,10 +71,38 @@ class App {
             const lines = input.split('\n');
             let genderWarnings = [];
 
+            let currentPokemon = '';
+            let hasGenderSpecified = false;
+
             lines.forEach((line, index) => {
+                line = line.trim();
+                
+                // Track current Pokémon being processed
+                if (line && !line.startsWith('-') && !line.startsWith('IVs:') && 
+                    !line.startsWith('EVs:') && !line.startsWith('Ability:') && 
+                    !line.startsWith('Level:') && !line.matches(/Nature$/)) {
+                    currentPokemon = line.split('@')[0].trim();
+                    hasGenderSpecified = false;
+                }
+
                 // Check for invalid gender specifications
-                if (line.match(/Gender:\s*[^MF\s]/i)) {
-                    genderWarnings.push(`Line ${index + 1}: Invalid gender specification. Use M or F.`);
+                if (line.toLowerCase().startsWith('gender:')) {
+                    hasGenderSpecified = true;
+                    const gender = line.split(':')[1].trim();
+                    if (!['M', 'F', 'm', 'f'].includes(gender)) {
+                        genderWarnings.push(`Line ${index + 1}: Invalid gender specification for ${currentPokemon}. Use M or F.`);
+                    }
+                }
+
+                // Check for gender in Pokémon name
+                if (currentPokemon && !hasGenderSpecified) {
+                    const genderMatch = currentPokemon.match(/\((M|F)\)/i);
+                    if (genderMatch) {
+                        const gender = genderMatch[1];
+                        if (!['M', 'F', 'm', 'f'].includes(gender)) {
+                            genderWarnings.push(`Invalid gender format in Pokémon name: ${currentPokemon}. Use (M) or (F).`);
+                        }
+                    }
                 }
             });
 
@@ -95,9 +117,7 @@ class App {
     }
 
     showValidationWarnings(warnings) {
-        const inputElement = document.getElementById('input');
         const warningDiv = document.getElementById('input-warnings') || this.createWarningElement();
-
         warningDiv.innerHTML = warnings.map(warning => `<div class="warning">${warning}</div>`).join('');
         warningDiv.style.display = 'block';
     }
@@ -134,10 +154,8 @@ class App {
                 document.getElementById('output').textContent = result.result;
                 this.highlightSuccessfulConversion();
                 
-                // Check for and display any gender-related information
-                if (result.genderInfo) {
-                    this.displayGenderInfo(result.genderInfo);
-                }
+                // Show gender info tooltip
+                this.showGenderInfo();
             } else {
                 // Handle conversion errors with enhanced error display
                 this.displayConversionError(result);
@@ -148,22 +166,11 @@ class App {
         }
     }
 
-    displayGenderInfo(genderInfo) {
+    showGenderInfo() {
         const tooltipDiv = document.querySelector('.gender-info-tooltip');
         if (tooltipDiv) {
-            // Update tooltip with specific information about gender assignments
-            let content = '<h4>Gender Assignments:</h4><ul>';
-            for (const [pokemon, gender] of Object.entries(genderInfo)) {
-                content += `<li>${pokemon}: ${gender}</li>`;
-            }
-            content += '</ul>';
-            tooltipDiv.innerHTML = content;
             tooltipDiv.style.display = 'block';
-
-            // Hide after a few seconds
-            setTimeout(() => {
-                tooltipDiv.style.display = 'none';
-            }, 5000);
+            this.hideTooltipWithDelay();
         }
     }
 
@@ -171,17 +178,13 @@ class App {
         const outputElement = document.getElementById('output');
         const inputElement = document.getElementById('input');
         
-        // Remove any existing error classes
         outputElement.classList.remove('error');
         inputElement.classList.remove('error');
-        
-        // Clear any previous error messages
         outputElement.innerHTML = '';
 
-        // Hide gender info tooltip
-        const tooltipDiv = document.querySelector('.gender-info-tooltip');
-        if (tooltipDiv) {
-            tooltipDiv.style.display = 'none';
+        const warningDiv = document.getElementById('input-warnings');
+        if (warningDiv) {
+            warningDiv.style.display = 'none';
         }
     }
 
@@ -189,11 +192,9 @@ class App {
         const outputElement = document.getElementById('output');
         const inputElement = document.getElementById('input');
 
-        // Add error styling
         outputElement.classList.add('error');
         inputElement.classList.add('error');
 
-        // Create a detailed error message
         const errorMessage = `
             <div class="error-container">
                 <h4>Conversion Error 🚨</h4>
@@ -203,10 +204,7 @@ class App {
             </div>
         `;
 
-        // Display the error message
         outputElement.innerHTML = errorMessage;
-
-        // Optional: Add a visual or audible alert
         this.triggerErrorAlert();
     }
 
@@ -214,11 +212,9 @@ class App {
         const outputElement = document.getElementById('output');
         const inputElement = document.getElementById('input');
 
-        // Add error styling
         outputElement.classList.add('error');
         inputElement.classList.add('error');
 
-        // Create a generic error message for unexpected issues
         const errorMessage = `
             <div class="error-container">
                 <h4>Unexpected Error 🛠️</h4>
@@ -228,13 +224,8 @@ class App {
             </div>
         `;
 
-        // Display the error message
         outputElement.innerHTML = errorMessage;
-
-        // Log the full error for debugging
         console.error('Unexpected conversion error:', error);
-
-        // Trigger error alert
         this.triggerErrorAlert();
     }
 
