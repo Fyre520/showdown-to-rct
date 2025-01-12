@@ -6,9 +6,6 @@ class App {
         
         // Initialize form handling
         this.initializeFormHandlers();
-
-        // Initialize tooltips for gender information
-        this.initializeGenderTooltips();
     }
 
     initializeFormHandlers() {
@@ -36,28 +33,11 @@ class App {
         document.getElementById('input').addEventListener('input', (e) => {
             this.validateInput(e.target.value);
         });
-    }
 
-    initializeGenderTooltips() {
-        const tooltipDiv = document.querySelector('.gender-info-tooltip');
-        if (tooltipDiv) {
-            tooltipDiv.addEventListener('mouseover', () => {
-                clearTimeout(this.tooltipTimer);
-            });
-            
-            tooltipDiv.addEventListener('mouseleave', () => {
-                this.hideTooltipWithDelay();
-            });
-        }
-    }
-
-    hideTooltipWithDelay() {
-        this.tooltipTimer = setTimeout(() => {
-            const tooltipDiv = document.querySelector('.gender-info-tooltip');
-            if (tooltipDiv) {
-                tooltipDiv.style.display = 'none';
-            }
-        }, 3000);
+        // Add copy button functionality
+        document.getElementById('copy-output').addEventListener('click', () => {
+            this.copyOutputToClipboard();
+        });
     }
 
     validateInput(input) {
@@ -67,9 +47,8 @@ class App {
         }
 
         try {
-            // Check for potential gender-related issues
             const lines = input.split('\n');
-            let genderWarnings = [];
+            let warnings = [];
 
             let currentPokemon = '';
             let hasGenderSpecified = false;
@@ -80,7 +59,7 @@ class App {
                 // Track current Pokémon being processed
                 if (line && !line.startsWith('-') && !line.startsWith('IVs:') && 
                     !line.startsWith('EVs:') && !line.startsWith('Ability:') && 
-                    !line.startsWith('Level:') && !line.matches(/Nature$/)) {
+                    !line.startsWith('Level:') && !line.endsWith(' Nature')) {
                     currentPokemon = line.split('@')[0].trim();
                     hasGenderSpecified = false;
                 }
@@ -90,24 +69,22 @@ class App {
                     hasGenderSpecified = true;
                     const gender = line.split(':')[1].trim();
                     if (!['M', 'F', 'm', 'f'].includes(gender)) {
-                        genderWarnings.push(`Line ${index + 1}: Invalid gender specification for ${currentPokemon}. Use M or F.`);
+                        warnings.push(`Line ${index + 1}: Invalid gender specification for ${currentPokemon}. Use M or F.`);
                     }
                 }
 
-                // Check for gender in Pokémon name
-                if (currentPokemon && !hasGenderSpecified) {
-                    const genderMatch = currentPokemon.match(/\((M|F)\)/i);
-                    if (genderMatch) {
-                        const gender = genderMatch[1];
-                        if (!['M', 'F', 'm', 'f'].includes(gender)) {
-                            genderWarnings.push(`Invalid gender format in Pokémon name: ${currentPokemon}. Use (M) or (F).`);
-                        }
+                // Check for level limitations
+                const levelMatch = line.match(/Level:\s*(\d+)/i);
+                if (levelMatch) {
+                    const level = parseInt(levelMatch[1]);
+                    if (level < 1 || level > 100) {
+                        warnings.push(`Line ${index + 1}: Invalid level ${level}. Must be between 1 and 100.`);
                     }
                 }
             });
 
-            if (genderWarnings.length > 0) {
-                this.showValidationWarnings(genderWarnings);
+            if (warnings.length > 0) {
+                this.showValidationWarnings(warnings);
             } else {
                 this.clearValidation();
             }
@@ -138,40 +115,83 @@ class App {
     }
 
     handleConversion() {
-        // Clear any previous error states
         this.resetErrorDisplay();
 
         try {
-            // Get input and trainer configuration
             const input = document.getElementById('input').value;
             const trainerConfig = this.getTrainerConfig();
             
-            // Perform conversion
             const result = ShowdownConverter.convert(input, trainerConfig);
             
-            // Handle successful conversion
             if (result.success) {
+                // Update output display
                 document.getElementById('output').textContent = result.result;
                 this.highlightSuccessfulConversion();
                 
-                // Show gender info tooltip
-                this.showGenderInfo();
+                // Show file information
+                this.displayFilePath(result.path);
+                
+                // Show success message with filename
+                this.displaySuccessMessage(`Trainer file "${result.filename}" has been generated and downloaded.`);
+
+                // Show copy button
+                document.getElementById('copy-output').style.display = 'inline-block';
             } else {
-                // Handle conversion errors with enhanced error display
                 this.displayConversionError(result);
+                document.getElementById('copy-output').style.display = 'none';
             }
         } catch (error) {
-            // Handle unexpected errors
             this.displayUnexpectedError(error);
+            document.getElementById('copy-output').style.display = 'none';
         }
     }
 
-    showGenderInfo() {
-        const tooltipDiv = document.querySelector('.gender-info-tooltip');
-        if (tooltipDiv) {
-            tooltipDiv.style.display = 'block';
-            this.hideTooltipWithDelay();
+    displayFilePath(path) {
+        const pathInfo = document.createElement('div');
+        pathInfo.className = 'path-info';
+        pathInfo.innerHTML = `
+            <div class="info-container">
+                <h4>File Location</h4>
+                <p>Place the downloaded file in your Minecraft instance at:</p>
+                <code>${path}</code>
+                <small>This will make the trainer available in your game.</small>
+            </div>
+        `;
+        
+        const outputSection = document.querySelector('.output-section');
+        const existingPathInfo = outputSection.querySelector('.path-info');
+        if (existingPathInfo) {
+            outputSection.removeChild(existingPathInfo);
         }
+        outputSection.appendChild(pathInfo);
+    }
+
+    displaySuccessMessage(message) {
+        const successMessage = document.createElement('div');
+        successMessage.className = 'success-message';
+        successMessage.textContent = message;
+        
+        const buttonContainer = document.querySelector('.button-container');
+        const existingMessage = buttonContainer.querySelector('.success-message');
+        if (existingMessage) {
+            buttonContainer.removeChild(existingMessage);
+        }
+        buttonContainer.appendChild(successMessage);
+        
+        setTimeout(() => {
+            if (successMessage.parentNode) {
+                successMessage.remove();
+            }
+        }, 5000);
+    }
+
+    copyOutputToClipboard() {
+        const outputText = document.getElementById('output').textContent;
+        navigator.clipboard.writeText(outputText).then(() => {
+            this.displaySuccessMessage('JSON copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy text:', err);
+        });
     }
 
     resetErrorDisplay() {
@@ -185,6 +205,11 @@ class App {
         const warningDiv = document.getElementById('input-warnings');
         if (warningDiv) {
             warningDiv.style.display = 'none';
+        }
+
+        const existingPathInfo = document.querySelector('.path-info');
+        if (existingPathInfo) {
+            existingPathInfo.remove();
         }
     }
 
