@@ -142,6 +142,7 @@ input[type="number"] {
     display: flex;
     justify-content: center;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 button {
@@ -151,13 +152,19 @@ button {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.3s ease;
     font-size: 1em;
     font-weight: bold;
+    min-width: 140px;
 }
 
 button:hover {
     background-color: var(--button-hover);
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(1px);
 }
 
 button.secondary {
@@ -182,6 +189,8 @@ pre {
     color: var(--text-color);
     border: 1px solid var(--textarea-border);
     transition: all 0.3s ease;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 
 /* Theme Switch Styles */
@@ -263,15 +272,6 @@ textarea.error, input.error {
     border-radius: 8px;
 }
 
-.path-info .info-container {
-    margin-bottom: 10px;
-}
-
-.path-info h4 {
-    margin: 0 0 10px 0;
-    color: var(--text-color);
-}
-
 .path-info code {
     display: block;
     padding: 10px;
@@ -290,7 +290,7 @@ textarea.error, input.error {
     opacity: 0.8;
 }
 
-/* Warning and Success Styles */
+/* Warning Styles */
 .warning-container {
     margin-top: 10px;
     padding: 10px;
@@ -314,6 +314,7 @@ textarea.error, input.error {
     font-weight: bold;
 }
 
+/* Success Message */
 .success-message {
     margin-top: 10px;
     padding: 10px;
@@ -347,11 +348,6 @@ textarea.error, input.error {
     transition: all 0.3s ease;
 }
 
-/* Copy Button */
-#copy-output {
-    display: none;
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
     .layout {
@@ -374,5 +370,9 @@ textarea.error, input.error {
     button {
         width: 100%;
         margin: 5px 0;
+    }
+
+    pre {
+        font-size: 14px;
     }
 }
