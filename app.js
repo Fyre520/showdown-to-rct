@@ -1,10 +1,7 @@
 // Main application logic that handles UI interactions and initialization
 class App {
     constructor() {
-        // Initialize theme management
         this.themeManager = new ThemeManager();
-        
-        // Initialize form handling
         this.initializeFormHandlers();
     }
 
@@ -34,9 +31,14 @@ class App {
             this.validateInput(e.target.value);
         });
 
-        // Add copy button functionality
+        // Copy button handler
         document.getElementById('copy-output').addEventListener('click', () => {
             this.copyOutputToClipboard();
+        });
+
+        // Download button handler
+        document.getElementById('download-json').addEventListener('click', () => {
+            this.handleDownload();
         });
     }
 
@@ -50,28 +52,8 @@ class App {
             const lines = input.split('\n');
             let warnings = [];
 
-            let currentPokemon = '';
-            let hasGenderSpecified = false;
-
             lines.forEach((line, index) => {
                 line = line.trim();
-                
-                // Track current Pokémon being processed
-                if (line && !line.startsWith('-') && !line.startsWith('IVs:') && 
-                    !line.startsWith('EVs:') && !line.startsWith('Ability:') && 
-                    !line.startsWith('Level:') && !line.endsWith(' Nature')) {
-                    currentPokemon = line.split('@')[0].trim();
-                    hasGenderSpecified = false;
-                }
-
-                // Check for invalid gender specifications
-                if (line.toLowerCase().startsWith('gender:')) {
-                    hasGenderSpecified = true;
-                    const gender = line.split(':')[1].trim();
-                    if (!['M', 'F', 'm', 'f'].includes(gender)) {
-                        warnings.push(`Line ${index + 1}: Invalid gender specification for ${currentPokemon}. Use M or F.`);
-                    }
-                }
 
                 // Check for level limitations
                 const levelMatch = line.match(/Level:\s*(\d+)/i);
@@ -124,26 +106,60 @@ class App {
             const result = ShowdownConverter.convert(input, trainerConfig);
             
             if (result.success) {
-                // Update output display
                 document.getElementById('output').textContent = result.result;
                 this.highlightSuccessfulConversion();
                 
-                // Show file information
                 this.displayFilePath(result.path);
                 
-                // Show success message with filename
-                this.displaySuccessMessage(`Trainer file "${result.filename}" has been generated and downloaded.`);
+                this.displaySuccessMessage('Team converted successfully! Review the JSON and click "Download" when ready.');
 
-                // Show copy button
                 document.getElementById('copy-output').style.display = 'inline-block';
+                document.getElementById('download-json').style.display = 'inline-block';
             } else {
                 this.displayConversionError(result);
                 document.getElementById('copy-output').style.display = 'none';
+                document.getElementById('download-json').style.display = 'none';
             }
         } catch (error) {
             this.displayUnexpectedError(error);
             document.getElementById('copy-output').style.display = 'none';
+            document.getElementById('download-json').style.display = 'none';
         }
+    }
+
+    handleDownload() {
+        const outputText = document.getElementById('output').textContent;
+        try {
+            const jsonData = JSON.parse(outputText);
+            const filename = ShowdownConverter.generateTrainerFilename(jsonData.name);
+            const jsonString = JSON.stringify(jsonData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const downloadLink = document.createElement('a');
+            downloadLink.href = url;
+            downloadLink.download = `${filename}.json`;
+
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            URL.revokeObjectURL(url);
+
+            this.displaySuccessMessage(`Trainer file "${filename}.json" has been downloaded.`);
+        } catch (error) {
+            console.error('Download error:', error);
+            this.displayUnexpectedError(error);
+        }
+    }
+
+    copyOutputToClipboard() {
+        const outputText = document.getElementById('output').textContent;
+        navigator.clipboard.writeText(outputText).then(() => {
+            this.displaySuccessMessage('JSON copied to clipboard!');
+        }).catch(err => {
+            console.error('Failed to copy text:', err);
+            this.displayUnexpectedError(new Error('Failed to copy to clipboard'));
+        });
     }
 
     displayFilePath(path) {
@@ -183,15 +199,6 @@ class App {
                 successMessage.remove();
             }
         }, 5000);
-    }
-
-    copyOutputToClipboard() {
-        const outputText = document.getElementById('output').textContent;
-        navigator.clipboard.writeText(outputText).then(() => {
-            this.displaySuccessMessage('JSON copied to clipboard!');
-        }).catch(err => {
-            console.error('Failed to copy text:', err);
-        });
     }
 
     resetErrorDisplay() {
@@ -250,7 +257,7 @@ class App {
         `;
 
         outputElement.innerHTML = errorMessage;
-        console.error('Unexpected conversion error:', error);
+        console.error('Unexpected error:', error);
         this.triggerErrorAlert();
     }
 
