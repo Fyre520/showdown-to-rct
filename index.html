@@ -23,25 +23,26 @@
             <h3 class="section-header">Input (Showdown Format)</h3>
             <textarea id="input" placeholder="Paste Showdown format team here...
 Example:
-Pikachu @ Light Ball
-Ability: Static
+Porygon @ Choice Specs
+Ability: Download
 Level: 75
 EVs: 252 SpA / 4 SpD / 252 Spe
 Timid Nature
+- Tri Attack
+- Ice Beam
 - Thunderbolt
-- Volt Switch
-- Surf
-- Quick Attack
+- Recover
 
-Gengar @ Choice Specs
-Ability: Levitate
+Chansey (F) @ Eviolite
+Ability: Natural Cure
 Level: 80
-EVs: 252 SpA / 4 SpD / 252 Spe
-Timid Nature
-- Shadow Ball
-- Thunderbolt
-- Focus Blast
-- Trick"></textarea>
+EVs: 252 HP / 252 Def / 4 SpD
+Bold Nature
+- Soft-Boiled
+- Seismic Toss
+- Thunder Wave
+- Toxic"></textarea>
+            <div id="input-warnings" class="warning-container" style="display: none;"></div>
         </div>
 
         <div class="trainer-config">
@@ -105,10 +106,14 @@ Timid Nature
         <pre id="output" placeholder="Converted trainer JSON will appear here"></pre>
     </div>
 
-    <!-- Optional: Error Sound (commented out) -->
-    <!-- <audio id="error-sound">
-        <source src="error-sound.mp3" type="audio/mpeg">
-    </audio> -->
+    <div class="gender-info-tooltip" style="display: none;">
+        <h4>Gender Handling:</h4>
+        <ul>
+            <li><strong>Genderless:</strong> Automatically detected for species like Porygon, Magnemite, etc.</li>
+            <li><strong>Gender-specific:</strong> Automatically set for species with fixed genders</li>
+            <li><strong>Random:</strong> Used when no specific gender is provided</li>
+        </ul>
+    </div>
 
     <!-- Load scripts in the correct order -->
     <script src="trainer-presets.js"></script>
