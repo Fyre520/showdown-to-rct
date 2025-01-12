@@ -27,42 +27,71 @@ const ShowdownConverter = {
         maxSelectMargin: 0.15
     },
 
-    // Regional forms mapping
-    REGIONAL_FORMS: {
+    // Forms and their corresponding aspects
+    FORM_ASPECTS: {
+        // Regional forms
         'alola': 'alolan',
         'galar': 'galarian',
         'hisui': 'hisuian',
         'paldea': 'paldean',
-        'gmax': 'gigantamax',
-        'mega': 'mega',
-        'primal': 'primal'
+
+        // Form variations
+        'therian': 'therian',
+        'zen': 'zen_mode',
+        'valencian': 'valencian',
+
+        // Species-specific form patterns
+        'east': 'east-sea',
+        'west': 'west-sea',
+
+        // Tatsugiri forms
+        'curly': 'tatsugiri-texture-curly',
+        'stretchy': 'tatsugiri-texture-stretchy',
+        'droopy': 'tatsugiri-texture-droopy',
+
+        // Squawkabilly colors
+        'blue': 'squawkabilly-color-blue',
+        'yellow': 'squawkabilly-color-yellow',
+        'green': 'squawkabilly-color-green',
+        'gray': 'squawkabilly-color-gray',
+
+        // Paldean Tauros breeds
+        'combat': 'paldean-breed-combat',
+        'aqua': 'paldean-breed-aqua',
+        'blaze': 'paldean-breed-blaze'
+    },
+
+    // Map of Vivillon patterns to their aspect names
+    VIVILLON_PATTERNS: {
+        'archipelago': 'vivillon-wings-archipelago',
+        'continental': 'vivillon-wings-continental',
+        'elegant': 'vivillon-wings-elegant',
+        'fancy': 'vivillon-wings-fancy',
+        'garden': 'vivillon-wings-garden',
+        'high-plains': 'vivillon-wings-high-plains',
+        'icy-snow': 'vivillon-wings-icy-snow',
+        'jungle': 'vivillon-wings-jungle',
+        'marine': 'vivillon-wings-marine',
+        'meadow': 'vivillon-wings-meadow',
+        'modern': 'vivillon-wings-modern',
+        'monsoon': 'vivillon-wings-monsoon',
+        'ocean': 'vivillon-wings-ocean',
+        'poke-ball': 'vivillon-wings-poke-ball',
+        'polar': 'vivillon-wings-polar',
+        'river': 'vivillon-wings-river',
+        'sandstorm': 'vivillon-wings-sandstorm',
+        'savanna': 'vivillon-wings-savanna',
+        'sun': 'vivillon-wings-sun',
+        'tundra': 'vivillon-wings-tundra'
     },
 
     generateTrainerFilename: function(trainerName) {
         return trainerName
             .toLowerCase()
-            .replace(/[^a-z0-9\s-]/g, '')  // Remove special characters
-            .replace(/\s+/g, '_')           // Convert spaces to underscores
-            .replace(/-+/g, '_')            // Convert hyphens to underscores
-            || 'trainer';                   // Default if name is empty/invalid
-    },
-
-    createDownloadableJSON: function(jsonData, trainerName) {
-        const filename = `${this.generateTrainerFilename(trainerName)}.json`;
-        const jsonString = JSON.stringify(jsonData, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-
-        const downloadLink = document.createElement('a');
-        downloadLink.href = url;
-        downloadLink.download = filename;
-
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-        URL.revokeObjectURL(url);
-
-        return filename;
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '_')
+            .replace(/-+/g, '_')
+            || 'trainer';
     },
 
     convert: function(showdownFormat, trainerConfig) {
@@ -100,14 +129,13 @@ const ShowdownConverter = {
                 team: pokemonList
             };
 
-            // Generate filename and trigger download
-            const filename = this.createDownloadableJSON(outputJson, trainerConfig.name);
+            const filename = this.generateTrainerFilename(trainerConfig.name);
 
             return {
                 success: true,
                 result: JSON.stringify(outputJson, null, 2),
                 filename: filename,
-                path: `data/rctmod/trainers/${filename}`
+                path: `data/rctmod/trainers/${filename}.json`
             };
 
         } catch (error) {
@@ -134,7 +162,7 @@ const ShowdownConverter = {
         if (this.GENDER_RATIOS.female_only.has(baseSpecies)) return 'FEMALE';
         if (this.GENDER_RATIOS.male_only.has(baseSpecies)) return 'MALE';
 
-        return 'GENDERLESS';
+        return 'MALE';
     },
 
     parseShowdownFormat: function(text) {
@@ -153,8 +181,8 @@ const ShowdownConverter = {
         const pokemon = {
             species: '',
             ability: '',
-            level: 100,  // Default level set to 100
-            gender: 'GENDERLESS',
+            level: 100,
+            gender: 'MALE',
             evs: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
             ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
             moveset: [],
@@ -177,7 +205,6 @@ const ShowdownConverter = {
                 continue;
             }
 
-            // Level detection
             const levelMatch = trimmedLine.match(/Level:\s*(\d+)/i);
             if (levelMatch) {
                 const level = parseInt(levelMatch[1]);
@@ -185,14 +212,12 @@ const ShowdownConverter = {
                 continue;
             }
 
-            // Gender detection
             const genderMatch = trimmedLine.match(/Gender:\s*(M|F)/i);
             if (genderMatch) {
                 explicitGender = genderMatch[1].toUpperCase();
                 continue;
             }
 
-            // Other properties
             if (trimmedLine.startsWith('Ability: ')) {
                 pokemon.ability = trimmedLine.substring(9).trim().toLowerCase().replace(/ /g, '');
             }
@@ -224,17 +249,25 @@ const ShowdownConverter = {
     processSpeciesName: function(name) {
         const genderMatch = name.match(/\((M|F)\)/i);
         let processedName = name.replace(/\s*\([MF]\)/i, '').toLowerCase().trim();
-
+        
         const result = { 
             species: processedName,
             gender: genderMatch ? genderMatch[1].toUpperCase() : null
         };
 
-        for (const [region, aspect] of Object.entries(this.REGIONAL_FORMS)) {
-            if (processedName.includes(`-${region}`)) {
-                result.species = processedName.replace(`-${region}`, '');
-                result.aspects = [aspect];
-                break;
+        // Check for form names
+        const parts = processedName.split('-');
+        if (parts.length > 1) {
+            result.species = parts[0];
+            const formName = parts.slice(1).join('-');
+
+            // Check for direct form matches
+            if (this.FORM_ASPECTS[formName]) {
+                result.aspects = [this.FORM_ASPECTS[formName]];
+            }
+            // Check for Vivillon patterns
+            else if (parts[0] === 'vivillon' && this.VIVILLON_PATTERNS[formName]) {
+                result.aspects = [this.VIVILLON_PATTERNS[formName]];
             }
         }
 
