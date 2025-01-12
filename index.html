@@ -1,10 +1,220 @@
 <!DOCTYPE html>
 <html data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Showdown to RCT Converter</title>
-    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Theme Variables - These define our color scheme for both light and dark modes */
+        :root[data-theme="light"] {
+            --background-color: #ffffff;
+            --text-color: #333333;
+            --textarea-bg: #ffffff;
+            --textarea-border: #cccccc;
+            --pre-background: #f5f5f5;
+            --button-bg: #4CAF50;
+            --button-hover: #45a049;
+            --card-bg: #f8f9fa;
+            --switch-bg: #ccc;
+            --switch-checked: #2d5930;
+            --section-border: #e0e0e0;
+        }
+
+        :root[data-theme="dark"] {
+            --background-color: #1a1a1a;
+            --text-color: #ffffff;
+            --textarea-bg: #2d2d2d;
+            --textarea-border: #404040;
+            --pre-background: #2d2d2d;
+            --button-bg: #2d5930;
+            --button-hover: #366c3a;
+            --card-bg: #333333;
+            --switch-bg: #666;
+            --switch-checked: #4CAF50;
+            --section-border: #404040;
+        }
+
+        /* Core Layout Styles */
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        /* Main Layout Grid */
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            margin-bottom: 20px;
+            min-height: 500px; /* Ensures minimum height for both sections */
+        }
+
+        /* Common Section Styles */
+        .input-section, .trainer-config {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Section Headers */
+        .section-header {
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--section-border);
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        /* Input Area Styles */
+        textarea {
+            flex: 1;
+            width: 100%;
+            min-height: 200px;
+            padding: 10px;
+            background-color: var(--textarea-bg);
+            color: var(--text-color);
+            border: 1px solid var(--textarea-border);
+            border-radius: 5px;
+            font-family: monospace;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--textarea-border);
+            border-radius: 4px;
+            background-color: var(--textarea-bg);
+            color: var(--text-color);
+            box-sizing: border-box;
+        }
+
+        input[type="number"] {
+            width: 80px;
+        }
+
+        /* Button Styles */
+        .button-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        button {
+            padding: 12px 24px;
+            background-color: var(--button-bg);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 1em;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background-color: var(--button-hover);
+        }
+
+        /* Output Section */
+        .output-section {
+            margin-top: 20px;
+        }
+
+        pre {
+            background-color: var(--pre-background);
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin-top: 10px;
+            color: var(--text-color);
+            border: 1px solid var(--textarea-border);
+        }
+
+        /* Theme Switch Styles */
+        .theme-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--switch-bg);
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--switch-checked);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .warning {
+            color: #ff6b6b;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+    </style>
 </head>
 <body>
     <div class="theme-switch">
@@ -21,27 +231,7 @@
     <div class="layout">
         <div class="input-section">
             <h3 class="section-header">Input (Showdown Format)</h3>
-            <textarea id="input" placeholder="Paste Showdown format team here...
-Example:
-Pikachu @ Light Ball
-Ability: Static
-Level: 75
-EVs: 252 SpA / 4 SpD / 252 Spe
-Timid Nature
-- Thunderbolt
-- Volt Switch
-- Surf
-- Quick Attack
-
-Gengar @ Choice Specs
-Ability: Levitate
-Level: 80
-EVs: 252 SpA / 4 SpD / 252 Spe
-Timid Nature
-- Shadow Ball
-- Thunderbolt
-- Focus Blast
-- Trick"></textarea>
+            <textarea id="input" placeholder="Paste Showdown format here..."></textarea>
         </div>
 
         <div class="trainer-config">
@@ -60,7 +250,7 @@ Timid Nature
 
             <div class="form-group">
                 <label for="trainer-name">Trainer Name</label>
-                <input type="text" id="trainer-name" placeholder="Enter trainer name">
+                <input type="text" id="trainer-name" placeholder="Enter name">
             </div>
 
             <div class="form-group">
@@ -97,20 +287,14 @@ Timid Nature
     </div>
 
     <div class="button-container">
-        <button id="convert-button">Convert Team</button>
+        <button id="convert-button">Convert</button>
     </div>
 
     <div class="output-section">
         <h3 class="section-header">Output (RCT Format)</h3>
-        <pre id="output" placeholder="Converted trainer JSON will appear here"></pre>
+        <pre id="output"></pre>
     </div>
 
-    <!-- Optional: Error Sound (commented out) -->
-    <!-- <audio id="error-sound">
-        <source src="error-sound.mp3" type="audio/mpeg">
-    </audio> -->
-
-    <!-- Load scripts in the correct order -->
     <script src="trainer-presets.js"></script>
     <script src="converter.js"></script>
     <script src="app.js"></script>
