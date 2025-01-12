@@ -12,7 +12,7 @@ const ShowdownConverter = {
         'giratina', 'kyurem', 'necrozma', 'zekrom', 'reshiram'
     ]),
 
-    // Pokemon with specific gender ratios (for future enhancement)
+    // Pokemon with specific gender ratios
     GENDER_RATIOS: {
         'female_only': new Set(['nidoran-f', 'nidorina', 'nidoqueen', 'chansey', 'blissey', 'happiny', 'kangaskhan', 'jynx', 'smoochum', 'miltank', 'illumise', 'latias', 'froslass', 'petilil', 'lilligant', 'vullaby', 'mandibuzz', 'flabebe', 'floette', 'florges']),
         'male_only': new Set(['nidoran-m', 'nidorino', 'nidoking', 'hitmonlee', 'hitmonchan', 'hitmontop', 'tyrogue', 'volbeat', 'latios', 'gallade', 'rufflet', 'braviary', 'impidimp', 'morgrem', 'grimmsnarl'])
@@ -73,29 +73,29 @@ const ShowdownConverter = {
     },
 
     determineGender: function(speciesName, explicitGender) {
-        // Convert species name to lowercase for comparison
-        const normalizedSpecies = speciesName.toLowerCase().trim();
+        // Strip any form names for gender checking
+        const baseSpecies = speciesName.split('-')[0].toLowerCase().trim();
 
         // Check if it's a genderless Pokémon
-        if (this.GENDERLESS_POKEMON.has(normalizedSpecies)) {
-            return 'NONE';
+        if (this.GENDERLESS_POKEMON.has(baseSpecies)) {
+            return 'GENDERLESS';
         }
 
-        // If an explicit gender was provided, use it
+        // If an explicit gender was provided, convert to full format
         if (explicitGender) {
-            return explicitGender.toUpperCase();
+            return explicitGender === 'M' ? 'MALE' : 'FEMALE';
         }
 
         // Check for gender-specific Pokémon
-        if (this.GENDER_RATIOS.female_only.has(normalizedSpecies)) {
-            return 'F';
+        if (this.GENDER_RATIOS.female_only.has(baseSpecies)) {
+            return 'FEMALE';
         }
-        if (this.GENDER_RATIOS.male_only.has(normalizedSpecies)) {
-            return 'M';
+        if (this.GENDER_RATIOS.male_only.has(baseSpecies)) {
+            return 'MALE';
         }
 
-        // Default to random gender for standard Pokémon
-        return 'RANDOM';
+        // Default to random gender for standard Pokémon (excluding genderless)
+        return 'MALE'; // Default to MALE as per common convention
     },
 
     getErrorHint: function(errorMessage) {
@@ -123,7 +123,7 @@ const ShowdownConverter = {
             species: '',
             ability: '',
             level: 50,
-            gender: 'RANDOM',
+            gender: 'MALE', // Default to MALE
             evs: {
                 hp: 0,
                 atk: 0,
@@ -152,11 +152,15 @@ const ShowdownConverter = {
                 const parts = line.split('@');
                 const speciesData = this.processSpeciesName(parts[0].trim());
                 pokemon.species = speciesData.species;
+                
                 if (speciesData.aspects) {
                     pokemon.aspects = speciesData.aspects;
                 }
                 if (parts[1]) {
                     pokemon.heldItem = parts[1].trim().toLowerCase().replace(/ /g, '_');
+                }
+                if (speciesData.gender) {
+                    explicitGender = speciesData.gender;
                 }
                 return;
             }
@@ -204,9 +208,16 @@ const ShowdownConverter = {
     },
 
     processSpeciesName: function(name) {
-        const processedName = name.toLowerCase().trim();
-        const result = { species: processedName };
+        // Remove any gender information in parentheses and trim
+        const genderMatch = name.match(/\((M|F)\)/i);
+        let processedName = name.replace(/\s*\([MF]\)/i, '').toLowerCase().trim();
 
+        const result = { 
+            species: processedName,
+            gender: genderMatch ? genderMatch[1].toUpperCase() : null
+        };
+
+        // Handle regional variants
         const regionalForms = {
             'alola': 'alolan',
             'galar': 'galarian',
@@ -217,11 +228,12 @@ const ShowdownConverter = {
             'primal': 'primal'
         };
 
+        // Check for regional variants and forms
         for (const [region, aspect] of Object.entries(regionalForms)) {
             if (processedName.includes(`-${region}`)) {
                 result.species = processedName.replace(`-${region}`, '');
                 result.aspects = [aspect];
-                return result;
+                break;
             }
         }
 
