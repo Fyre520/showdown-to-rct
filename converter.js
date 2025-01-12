@@ -18,6 +18,15 @@ const ShowdownConverter = {
         'male_only': new Set(['nidoran-m', 'nidorino', 'nidoking', 'hitmonlee', 'hitmonchan', 'hitmontop', 'tyrogue', 'volbeat', 'latios', 'gallade', 'rufflet', 'braviary', 'impidimp', 'morgrem', 'grimmsnarl'])
     },
 
+    // Default AI configuration for RCT
+    DEFAULT_AI_CONFIG: {
+        moveBias: 1,
+        statMoveBias: 0.1,
+        switchBias: 0.65,
+        itemBias: 1,
+        maxSelectMargin: 0.15
+    },
+
     // Main conversion function that ties everything together
     convert: function(showdownFormat, trainerConfig) {
         try {
@@ -37,26 +46,25 @@ const ShowdownConverter = {
             }
 
             const output = {
-                name: trainerConfig.name || "Trainer",
+                name: trainerConfig.name || "",
+                identity: trainerConfig.identity || trainerConfig.name || "",
                 ai: {
                     type: "rct",
                     data: {
-                        maxSelectMargin: parseFloat(trainerConfig.aiMargin)
+                        moveBias: this.DEFAULT_AI_CONFIG.moveBias,
+                        statMoveBias: this.DEFAULT_AI_CONFIG.statMoveBias,
+                        switchBias: this.DEFAULT_AI_CONFIG.switchBias,
+                        itemBias: this.DEFAULT_AI_CONFIG.itemBias,
+                        maxSelectMargin: parseFloat(trainerConfig.aiMargin) || this.DEFAULT_AI_CONFIG.maxSelectMargin
                     }
                 },
-                battleRules: {
-                    maxItemUses: parseInt(trainerConfig.maxItems)
-                },
+                battleFormat: trainerConfig.battleFormat || "GEN_9_SINGLES",
                 bag: [{
-                    item: trainerConfig.itemType,
+                    item: trainerConfig.itemType.replace('cobblemon:', ''),
                     quantity: parseInt(trainerConfig.itemQuantity)
                 }],
                 team: pokemonList
             };
-
-            if (trainerConfig.battleFormat) {
-                output.battleFormat = trainerConfig.battleFormat;
-            }
 
             return {
                 success: true,
@@ -94,8 +102,8 @@ const ShowdownConverter = {
             return 'MALE';
         }
 
-        // Default to random gender for standard Pokémon (excluding genderless)
-        return 'MALE'; // Default to MALE as per common convention
+        // Default to GENDERLESS as per specification
+        return 'GENDERLESS';
     },
 
     getErrorHint: function(errorMessage) {
@@ -122,8 +130,8 @@ const ShowdownConverter = {
         const pokemon = {
             species: '',
             ability: '',
-            level: 50,
-            gender: 'MALE', // Default to MALE
+            level: 1,  // Default level is 1 per specification
+            gender: 'GENDERLESS',  // Default gender is GENDERLESS per specification
             evs: {
                 hp: 0,
                 atk: 0,
@@ -140,7 +148,8 @@ const ShowdownConverter = {
                 spd: 31,
                 spe: 31
             },
-            moveset: []
+            moveset: [],
+            shiny: false  // Default shiny value per specification
         };
 
         let explicitGender = null;
@@ -171,7 +180,7 @@ const ShowdownConverter = {
                 if (detectedLevel >= 1 && detectedLevel <= 100) {
                     pokemon.level = detectedLevel;
                 } else {
-                    console.warn(`Invalid level detected: ${detectedLevel}. Defaulting to 50.`);
+                    console.warn(`Invalid level detected: ${detectedLevel}. Defaulting to 1.`);
                 }
             }
 
@@ -194,6 +203,9 @@ const ShowdownConverter = {
             }
             else if (line.startsWith('- ')) {
                 pokemon.moveset.push(line.substring(2).toLowerCase().replace(/ /g, ''));
+            }
+            else if (line.toLowerCase().includes('shiny')) {
+                pokemon.shiny = true;
             }
         });
 
