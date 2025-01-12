@@ -33,15 +33,15 @@ Timid Nature
 - Thunderbolt
 - Recover
 
-Chansey (F) @ Eviolite
-Ability: Natural Cure
-Level: 80
-EVs: 252 HP / 252 Def / 4 SpD
-Bold Nature
-- Soft-Boiled
-- Seismic Toss
-- Thunder Wave
-- Toxic"></textarea>
+Charizard (M) @ Charizardite X
+Ability: Blaze
+Level: 100
+EVs: 252 Atk / 4 SpD / 252 Spe
+Adamant Nature
+- Flare Blitz
+- Dragon Claw
+- Earthquake
+- Roost"></textarea>
             <div id="input-warnings" class="warning-container" style="display: none;"></div>
         </div>
 
@@ -99,20 +99,12 @@ Bold Nature
 
     <div class="button-container">
         <button id="convert-button">Convert Team</button>
+        <button id="copy-output" class="secondary" style="display: none;">Copy JSON</button>
     </div>
 
     <div class="output-section">
         <h3 class="section-header">Output (RCT Format)</h3>
         <pre id="output" placeholder="Converted trainer JSON will appear here"></pre>
-    </div>
-
-    <div class="gender-info-tooltip" style="display: none;">
-        <h4>Gender Handling:</h4>
-        <ul>
-            <li><strong>Genderless:</strong> Automatically detected for species like Porygon, Magnemite, etc.</li>
-            <li><strong>Gender-specific:</strong> Automatically set for species with fixed genders</li>
-            <li><strong>Random:</strong> Used when no specific gender is provided</li>
-        </ul>
     </div>
 
     <!-- Load scripts in the correct order -->
