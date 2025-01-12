@@ -6,6 +6,9 @@ class App {
         
         // Initialize form handling
         this.initializeFormHandlers();
+
+        // Initialize tooltips for gender information
+        this.initializeGenderTooltips();
     }
 
     initializeFormHandlers() {
@@ -28,6 +31,90 @@ class App {
         document.getElementById('ai-margin').addEventListener('input', (e) => {
             this.updateAIWarning(e.target.value);
         });
+
+        // Add input validation for real-time feedback
+        document.getElementById('input').addEventListener('input', (e) => {
+            this.validateInput(e.target.value);
+        });
+    }
+
+    initializeGenderTooltips() {
+        // Add tooltip information about gender handling
+        const tooltipInfo = {
+            'genderless': 'Automatically detected for species like Porygon, Magnemite, etc.',
+            'gender-specific': 'Automatically set for species with fixed genders',
+            'random': 'Used when no specific gender is provided'
+        };
+
+        // Create tooltip elements (implementation depends on your UI framework)
+        this.createTooltipElements(tooltipInfo);
+    }
+
+    createTooltipElements(tooltipInfo) {
+        const outputSection = document.querySelector('.output-section');
+        const tooltipDiv = document.createElement('div');
+        tooltipDiv.className = 'gender-info-tooltip';
+        tooltipDiv.style.display = 'none';
+        
+        let tooltipContent = '<h4>Gender Handling:</h4><ul>';
+        for (const [key, value] of Object.entries(tooltipInfo)) {
+            tooltipContent += `<li><strong>${key}:</strong> ${value}</li>`;
+        }
+        tooltipContent += '</ul>';
+        
+        tooltipDiv.innerHTML = tooltipContent;
+        outputSection.appendChild(tooltipDiv);
+    }
+
+    validateInput(input) {
+        if (!input.trim()) {
+            this.clearValidation();
+            return;
+        }
+
+        try {
+            // Check for potential gender-related issues
+            const lines = input.split('\n');
+            let genderWarnings = [];
+
+            lines.forEach((line, index) => {
+                // Check for invalid gender specifications
+                if (line.match(/Gender:\s*[^MF\s]/i)) {
+                    genderWarnings.push(`Line ${index + 1}: Invalid gender specification. Use M or F.`);
+                }
+            });
+
+            if (genderWarnings.length > 0) {
+                this.showValidationWarnings(genderWarnings);
+            } else {
+                this.clearValidation();
+            }
+        } catch (error) {
+            console.error('Validation error:', error);
+        }
+    }
+
+    showValidationWarnings(warnings) {
+        const inputElement = document.getElementById('input');
+        const warningDiv = document.getElementById('input-warnings') || this.createWarningElement();
+
+        warningDiv.innerHTML = warnings.map(warning => `<div class="warning">${warning}</div>`).join('');
+        warningDiv.style.display = 'block';
+    }
+
+    createWarningElement() {
+        const warningDiv = document.createElement('div');
+        warningDiv.id = 'input-warnings';
+        warningDiv.className = 'warning-container';
+        document.getElementById('input').parentNode.appendChild(warningDiv);
+        return warningDiv;
+    }
+
+    clearValidation() {
+        const warningDiv = document.getElementById('input-warnings');
+        if (warningDiv) {
+            warningDiv.style.display = 'none';
+        }
     }
 
     handleConversion() {
@@ -46,6 +133,11 @@ class App {
             if (result.success) {
                 document.getElementById('output').textContent = result.result;
                 this.highlightSuccessfulConversion();
+                
+                // Check for and display any gender-related information
+                if (result.genderInfo) {
+                    this.displayGenderInfo(result.genderInfo);
+                }
             } else {
                 // Handle conversion errors with enhanced error display
                 this.displayConversionError(result);
@@ -56,7 +148,25 @@ class App {
         }
     }
 
-    // Reset any previous error indicators
+    displayGenderInfo(genderInfo) {
+        const tooltipDiv = document.querySelector('.gender-info-tooltip');
+        if (tooltipDiv) {
+            // Update tooltip with specific information about gender assignments
+            let content = '<h4>Gender Assignments:</h4><ul>';
+            for (const [pokemon, gender] of Object.entries(genderInfo)) {
+                content += `<li>${pokemon}: ${gender}</li>`;
+            }
+            content += '</ul>';
+            tooltipDiv.innerHTML = content;
+            tooltipDiv.style.display = 'block';
+
+            // Hide after a few seconds
+            setTimeout(() => {
+                tooltipDiv.style.display = 'none';
+            }, 5000);
+        }
+    }
+
     resetErrorDisplay() {
         const outputElement = document.getElementById('output');
         const inputElement = document.getElementById('input');
@@ -67,9 +177,14 @@ class App {
         
         // Clear any previous error messages
         outputElement.innerHTML = '';
+
+        // Hide gender info tooltip
+        const tooltipDiv = document.querySelector('.gender-info-tooltip');
+        if (tooltipDiv) {
+            tooltipDiv.style.display = 'none';
+        }
     }
 
-    // Enhanced error display for conversion errors
     displayConversionError(result) {
         const outputElement = document.getElementById('output');
         const inputElement = document.getElementById('input');
@@ -95,7 +210,6 @@ class App {
         this.triggerErrorAlert();
     }
 
-    // Handle unexpected errors that might occur during conversion
     displayUnexpectedError(error) {
         const outputElement = document.getElementById('output');
         const inputElement = document.getElementById('input');
@@ -124,42 +238,24 @@ class App {
         this.triggerErrorAlert();
     }
 
-    // Add a visual or sound alert for errors
     triggerErrorAlert() {
-        // Optional: Add a subtle shake animation to input
         const inputElement = document.getElementById('input');
         inputElement.classList.add('shake-error');
         
-        // Remove shake animation after a short duration
         setTimeout(() => {
             inputElement.classList.remove('shake-error');
         }, 500);
-
-        // Optional: Play a sound (commented out by default)
-        // this.playErrorSound();
     }
 
-    // Optional method for playing an error sound
-    playErrorSound() {
-        // This would require adding an audio element to HTML
-        // const errorSound = document.getElementById('error-sound');
-        // errorSound.play();
-    }
-
-    // Highlight successful conversion with a temporary effect
     highlightSuccessfulConversion() {
         const outputElement = document.getElementById('output');
-        
-        // Add success class
         outputElement.classList.add('conversion-success');
         
-        // Remove success highlight after a short duration
         setTimeout(() => {
             outputElement.classList.remove('conversion-success');
         }, 2000);
     }
 
-    // Retrieve current trainer configuration
     getTrainerConfig() {
         return {
             name: document.getElementById('trainer-name').value,
@@ -171,15 +267,16 @@ class App {
         };
     }
 
-    // Update AI difficulty warning
     updateAIWarning(value) {
         const warning = document.getElementById('ai-warning');
         if (value < 0.1) {
             warning.textContent = "Very challenging AI behavior";
             warning.classList.add('warning-intense');
+            warning.classList.remove('warning-random');
         } else if (value > 0.3) {
             warning.textContent = "More random AI behavior";
             warning.classList.add('warning-random');
+            warning.classList.remove('warning-intense');
         } else {
             warning.textContent = "";
             warning.classList.remove('warning-intense', 'warning-random');
@@ -187,7 +284,6 @@ class App {
     }
 }
 
-// Theme management class remains unchanged
 class ThemeManager {
     constructor() {
         this.initialize();
