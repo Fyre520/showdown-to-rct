@@ -1,4 +1,4 @@
-// Main converter object that handles the transformation logic
+// Main converter object that handles all the transformation logic
 const ShowdownConverter = {
     // List of known genderless Pokémon
     GENDERLESS_POKEMON: new Set([
@@ -38,6 +38,33 @@ const ShowdownConverter = {
         'primal': 'primal'
     },
 
+    generateTrainerFilename: function(trainerName) {
+        return trainerName
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '')  // Remove special characters
+            .replace(/\s+/g, '_')           // Convert spaces to underscores
+            .replace(/-+/g, '_')            // Convert hyphens to underscores
+            || 'trainer';                   // Default if name is empty/invalid
+    },
+
+    createDownloadableJSON: function(jsonData, trainerName) {
+        const filename = `${this.generateTrainerFilename(trainerName)}.json`;
+        const jsonString = JSON.stringify(jsonData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = filename;
+
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        URL.revokeObjectURL(url);
+
+        return filename;
+    },
+
     convert: function(showdownFormat, trainerConfig) {
         try {
             if (!showdownFormat?.trim()) {
@@ -55,26 +82,34 @@ const ShowdownConverter = {
                 pokemonList.length = 6;
             }
 
+            const outputJson = {
+                name: trainerConfig.name || "",
+                identity: trainerConfig.identity || trainerConfig.name || "",
+                ai: {
+                    type: "rct",
+                    data: {
+                        ...this.DEFAULT_AI_CONFIG,
+                        maxSelectMargin: parseFloat(trainerConfig.aiMargin) || this.DEFAULT_AI_CONFIG.maxSelectMargin
+                    }
+                },
+                battleFormat: trainerConfig.battleFormat || "GEN_9_SINGLES",
+                bag: [{
+                    item: trainerConfig.itemType.replace('cobblemon:', ''),
+                    quantity: parseInt(trainerConfig.itemQuantity)
+                }],
+                team: pokemonList
+            };
+
+            // Generate filename and trigger download
+            const filename = this.createDownloadableJSON(outputJson, trainerConfig.name);
+
             return {
                 success: true,
-                result: JSON.stringify({
-                    name: trainerConfig.name || "",
-                    identity: trainerConfig.identity || trainerConfig.name || "",
-                    ai: {
-                        type: "rct",
-                        data: {
-                            ...this.DEFAULT_AI_CONFIG,
-                            maxSelectMargin: parseFloat(trainerConfig.aiMargin) || this.DEFAULT_AI_CONFIG.maxSelectMargin
-                        }
-                    },
-                    battleFormat: trainerConfig.battleFormat || "GEN_9_SINGLES",
-                    bag: [{
-                        item: trainerConfig.itemType.replace('cobblemon:', ''),
-                        quantity: parseInt(trainerConfig.itemQuantity)
-                    }],
-                    team: pokemonList
-                }, null, 2)
+                result: JSON.stringify(outputJson, null, 2),
+                filename: filename,
+                path: `data/rctmod/trainers/${filename}`
             };
+
         } catch (error) {
             console.error('Conversion Error:', error);
             return {
