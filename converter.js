@@ -1,24 +1,20 @@
-// Main converter object that handles all the transformation logic
-const ShowdownConverter = {
-    // List of known genderless Pokémon
-    GENDERLESS_POKEMON: new Set([
-        'magnemite', 'magneton', 'magnezone', 'voltorb', 'electrode', 'staryu', 'starmie',
-        'bronzor', 'bronzong', 'baltoy', 'claydol', 'beldum', 'metang', 'metagross',
-        'porygon', 'porygon2', 'porygonz', 'unown', 'carbink', 'minior', 'dhelmise',
-        'rotom', 'ditto', 'klink', 'klang', 'klinklang', 'cryogonal', 'golett', 'golurk',
-        'lunatone', 'solrock', 'cosmog', 'cosmoem', 'solgaleo', 'lunala', 'nihilego',
-        'registeel', 'regirock', 'regice', 'regieleki', 'regidrago', 'regigigas',
-        'type: null', 'silvally', 'groudon', 'kyogre', 'rayquaza', 'dialga', 'palkia',
-        'giratina', 'kyurem', 'necrozma', 'zekrom', 'reshiram'
-    ]),
+// File: converter.js
 
-    // Pokemon with specific gender ratios
-    GENDER_RATIOS: {
-        'female_only': new Set(['nidoran-f', 'nidorina', 'nidoqueen', 'chansey', 'blissey', 'happiny', 'kangaskhan', 'jynx', 'smoochum', 'miltank', 'illumise', 'latias', 'froslass', 'petilil', 'lilligant', 'vullaby', 'mandibuzz', 'flabebe', 'floette', 'florges']),
-        'male_only': new Set(['nidoran-m', 'nidorino', 'nidoking', 'hitmonlee', 'hitmonchan', 'hitmontop', 'tyrogue', 'volbeat', 'latios', 'gallade', 'rufflet', 'braviary', 'impidimp', 'morgrem', 'grimmsnarl'])
+/**
+ * ShowdownConverter: Converts Pokemon Showdown format teams to RCT format
+ */
+const ShowdownConverter = {
+    cache: {
+        pokemon: new Map(),
+        forms: new Map(),
+        gender: {
+            genderless: new Set(),
+            femaleOnly: new Set(),
+            maleOnly: new Set()
+        },
+        initialized: false
     },
 
-    // Default AI configuration
     DEFAULT_AI_CONFIG: {
         moveBias: 1,
         statMoveBias: 0.1,
@@ -27,77 +23,79 @@ const ShowdownConverter = {
         maxSelectMargin: 0.15
     },
 
-    // Forms and their corresponding aspects
-    FORM_ASPECTS: {
-        // Regional forms
-        'alola': 'alolan',
-        'galar': 'galarian',
-        'hisui': 'hisuian',
-        'paldea': 'paldean',
+    /**
+     * Initializes the converter by loading necessary JSON data
+     */
+    async initialize() {
+        if (this.cache.initialized) return true;
 
-        // Form variations
-        'therian': 'therian',
-        'zen': 'zen_mode',
-        'valencian': 'valencian',
-
-        // Species-specific form patterns
-        'east': 'east-sea',
-        'west': 'west-sea',
-
-        // Tatsugiri forms
-        'curly': 'tatsugiri-texture-curly',
-        'stretchy': 'tatsugiri-texture-stretchy',
-        'droopy': 'tatsugiri-texture-droopy',
-
-        // Squawkabilly colors
-        'blue': 'squawkabilly-color-blue',
-        'yellow': 'squawkabilly-color-yellow',
-        'green': 'squawkabilly-color-green',
-        'gray': 'squawkabilly-color-gray',
-
-        // Paldean Tauros breeds
-        'combat': 'paldean-breed-combat',
-        'aqua': 'paldean-breed-aqua',
-        'blaze': 'paldean-breed-blaze'
-    },
-
-    // Map of Vivillon patterns to their aspect names
-    VIVILLON_PATTERNS: {
-        'archipelago': 'vivillon-wings-archipelago',
-        'continental': 'vivillon-wings-continental',
-        'elegant': 'vivillon-wings-elegant',
-        'fancy': 'vivillon-wings-fancy',
-        'garden': 'vivillon-wings-garden',
-        'high-plains': 'vivillon-wings-high-plains',
-        'icy-snow': 'vivillon-wings-icy-snow',
-        'jungle': 'vivillon-wings-jungle',
-        'marine': 'vivillon-wings-marine',
-        'meadow': 'vivillon-wings-meadow',
-        'modern': 'vivillon-wings-modern',
-        'monsoon': 'vivillon-wings-monsoon',
-        'ocean': 'vivillon-wings-ocean',
-        'poke-ball': 'vivillon-wings-poke-ball',
-        'polar': 'vivillon-wings-polar',
-        'river': 'vivillon-wings-river',
-        'sandstorm': 'vivillon-wings-sandstorm',
-        'savanna': 'vivillon-wings-savanna',
-        'sun': 'vivillon-wings-sun',
-        'tundra': 'vivillon-wings-tundra'
-    },
-
-    generateTrainerFilename: function(trainerName) {
-        return trainerName
-            .toLowerCase()
-            .replace(/[^a-z0-9\s-]/g, '')
-            .replace(/\s+/g, '_')
-            .replace(/-+/g, '_')
-            || 'trainer';
-    },
-
-    convert: function(showdownFormat, trainerConfig) {
         try {
+            // Load Pokemon data from all generations
+            for (let gen = 1; gen <= 9; gen++) {
+                const genData = await this.loadJSON(`data/pokemon/gen${gen}.json`);
+                genData.pokemon.forEach(name => this.cache.pokemon.set(name, gen));
+            }
+
+            // Load regional forms data
+            const formData = await this.loadJSON('data/forms/regional-forms.json');
+            for (const [form, data] of Object.entries(formData)) {
+                if (!['format_version', 'last_updated', 'description'].includes(form)) {
+                    this.cache.forms.set(form, data);
+                }
+            }
+
+            // Load gender data
+            const genderlessData = await this.loadJSON('data/gender/genderless.json');
+            genderlessData.pokemon.forEach(name => this.cache.gender.genderless.add(name));
+
+            const genderLockedData = await this.loadJSON('data/gender/gender-locked.json');
+            genderLockedData.female_only.pokemon.forEach(name => 
+                this.cache.gender.femaleOnly.add(name));
+            genderLockedData.male_only.pokemon.forEach(name => 
+                this.cache.gender.maleOnly.add(name));
+
+            this.cache.initialized = true;
+            return true;
+        } catch (error) {
+            console.error('Initialization error:', error);
+            throw new Error(`Failed to initialize converter: ${error.message}`);
+        }
+    },
+
+    /**
+     * Loads JSON data from a file
+     */
+    async loadJSON(path) {
+        try {
+            const response = await fetch(path);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error(`Error loading ${path}:`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Validates if a Pokemon species exists
+     */
+    isValidSpecies(species) {
+        return this.cache.pokemon.has(species);
+    },
+
+    /**
+     * Converts Showdown format to RCT JSON
+     */
+    convert(showdownFormat, trainerConfig) {
+        try {
+            if (!this.cache.initialized) {
+                throw new Error("Converter not initialized. Call initialize() first.");
+            }
+
             if (!showdownFormat?.trim()) {
-                throw new Error("No Pokémon team data provided. Please paste a Showdown format team.");
+                throw new Error("No Pokémon team data provided");
             }
 
             const pokemonList = this.parseShowdownFormat(showdownFormat);
@@ -123,23 +121,22 @@ const ShowdownConverter = {
                 },
                 battleFormat: trainerConfig.battleFormat || "GEN_9_SINGLES",
                 bag: [{
-                    item: trainerConfig.itemType.replace('cobblemon:', ''),
-                    quantity: parseInt(trainerConfig.itemQuantity)
+                    item: trainerConfig.itemType?.replace('cobblemon:', '') || "potion",
+                    quantity: parseInt(trainerConfig.itemQuantity) || 1
                 }],
                 team: pokemonList
             };
 
-            const filename = this.generateTrainerFilename(trainerConfig.name);
+            const filename = this.generateFilename(trainerConfig.name);
 
             return {
                 success: true,
                 result: JSON.stringify(outputJson, null, 2),
-                filename: filename,
+                filename: `${filename}.json`,
                 path: `data/rctmod/trainers/${filename}.json`
             };
 
         } catch (error) {
-            console.error('Conversion Error:', error);
             return {
                 success: false,
                 error: error.message,
@@ -148,149 +145,187 @@ const ShowdownConverter = {
         }
     },
 
-    determineGender: function(speciesName, explicitGender) {
-        const baseSpecies = speciesName.split('-')[0].toLowerCase().trim();
-
-        if (this.GENDERLESS_POKEMON.has(baseSpecies)) {
-            return 'GENDERLESS';
-        }
-
-        if (explicitGender) {
-            return explicitGender === 'M' ? 'MALE' : 'FEMALE';
-        }
-
-        if (this.GENDER_RATIOS.female_only.has(baseSpecies)) return 'FEMALE';
-        if (this.GENDER_RATIOS.male_only.has(baseSpecies)) return 'MALE';
-
-        return 'MALE';
-    },
-
-    parseShowdownFormat: function(text) {
+    /**
+     * Parses Showdown format text into Pokemon objects
+     */
+    parseShowdownFormat(text) {
         return text.split('\n\n')
             .filter(entry => entry.trim())
-            .map(entry => this.parseSinglePokemon(entry));
+            .map(entry => this.parsePokemon(entry));
     },
 
-    parseSinglePokemon: function(text) {
-        const lines = text.split('\n').filter(line => line.trim());
+    /**
+     * Parses a single Pokemon entry
+     */
+    parsePokemon(entry) {
+        const lines = entry.split('\n').filter(line => line.trim());
         
         if (!lines.length) {
-            throw new Error("Empty Pokémon entry: Unable to parse Pokémon details");
+            throw new Error("Empty Pokémon entry");
         }
 
         const pokemon = {
             species: '',
-            ability: '',
             level: 100,
             gender: 'MALE',
+            ability: '',
+            nature: '',
             evs: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
             ivs: { hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31 },
             moveset: [],
             shiny: false
         };
 
-        let explicitGender = null;
-
-        for (const line of lines) {
-            const trimmedLine = line.trim();
-            
-            if (!pokemon.species) {
-                const parts = trimmedLine.split('@');
-                const speciesData = this.processSpeciesName(parts[0].trim());
-                pokemon.species = speciesData.species;
-                
-                if (speciesData.aspects) pokemon.aspects = speciesData.aspects;
-                if (parts[1]) pokemon.heldItem = parts[1].trim().toLowerCase().replace(/ /g, '_');
-                if (speciesData.gender) explicitGender = speciesData.gender;
-                continue;
-            }
-
-            const levelMatch = trimmedLine.match(/Level:\s*(\d+)/i);
-            if (levelMatch) {
-                const level = parseInt(levelMatch[1]);
-                if (level >= 1 && level <= 100) pokemon.level = level;
-                continue;
-            }
-
-            const genderMatch = trimmedLine.match(/Gender:\s*(M|F)/i);
-            if (genderMatch) {
-                explicitGender = genderMatch[1].toUpperCase();
-                continue;
-            }
-
-            if (trimmedLine.startsWith('Ability: ')) {
-                pokemon.ability = trimmedLine.substring(9).trim().toLowerCase().replace(/ /g, '');
-            }
-            else if (trimmedLine.startsWith('EVs: ')) {
-                this.parseStats(trimmedLine.substring(5), pokemon.evs);
-            }
-            else if (trimmedLine.startsWith('IVs: ')) {
-                this.parseStats(trimmedLine.substring(5), pokemon.ivs);
-            }
-            else if (trimmedLine.endsWith(' Nature')) {
-                pokemon.nature = trimmedLine.split(' ')[0].toLowerCase();
-            }
-            else if (trimmedLine.startsWith('- ')) {
-                pokemon.moveset.push(trimmedLine.substring(2).toLowerCase().replace(/ /g, ''));
-            }
-            else if (trimmedLine.toLowerCase().includes('shiny')) {
-                pokemon.shiny = true;
-            }
+        // Parse first line (species and held item)
+        const firstLine = lines[0].split('@');
+        const speciesInfo = this.parseSpecies(firstLine[0].trim());
+        
+        if (!this.isValidSpecies(speciesInfo.species)) {
+            throw new Error(`Invalid Pokémon species: ${speciesInfo.species}`);
         }
 
-        if (!pokemon.species) {
-            throw new Error("No valid Pokémon species found in the entry");
+        pokemon.species = speciesInfo.species;
+        
+        if (speciesInfo.aspects) {
+            pokemon.aspects = speciesInfo.aspects;
+        }
+        
+        if (firstLine[1]) {
+            pokemon.heldItem = firstLine[1].trim().toLowerCase().replace(/ /g, '_');
         }
 
-        pokemon.gender = this.determineGender(pokemon.species, explicitGender);
+        // Parse remaining lines
+        lines.slice(1).forEach(line => this.parsePokemonLine(line.trim(), pokemon));
+
+        // Set gender based on species
+        pokemon.gender = this.determineGender(pokemon.species, pokemon.gender);
+
         return pokemon;
     },
 
-    processSpeciesName: function(name) {
-        const genderMatch = name.match(/\((M|F)\)/i);
-        let processedName = name.replace(/\s*\([MF]\)/i, '').toLowerCase().trim();
+    /**
+     * Parses species name and handles forms
+     */
+    parseSpecies(speciesString) {
+        // Remove mega, gmax, and tera type suffixes
+        let name = speciesString
+            .replace(/-Mega(-[XY])?|-Gmax|-Tera(\s+\w+)?|-Primal/i, '')
+            .trim()
+            .toLowerCase();
         
-        const result = { 
-            species: processedName,
-            gender: genderMatch ? genderMatch[1].toUpperCase() : null
-        };
+        // Handle gender in name
+        name = name.replace(/\s*\([MF]\)/i, '');
 
-        // Check for form names
-        const parts = processedName.split('-');
-        if (parts.length > 1) {
-            result.species = parts[0];
-            const formName = parts.slice(1).join('-');
+        // Handle regional forms
+        const formMatch = name.match(/-([a-zA-Z]+)$/);
+        if (formMatch) {
+            const formName = formMatch[1].toLowerCase();
+            const baseSpecies = name.replace(/-[a-zA-Z]+$/, '');
 
-            // Check for direct form matches
-            if (this.FORM_ASPECTS[formName]) {
-                result.aspects = [this.FORM_ASPECTS[formName]];
-            }
-            // Check for Vivillon patterns
-            else if (parts[0] === 'vivillon' && this.VIVILLON_PATTERNS[formName]) {
-                result.aspects = [this.VIVILLON_PATTERNS[formName]];
+            const formData = this.cache.forms.get(formName);
+            if (formData && formData.pokemon.includes(baseSpecies)) {
+                return {
+                    species: baseSpecies,
+                    aspects: [formData.name]
+                };
             }
         }
 
-        return result;
+        return { species: name };
     },
 
-    parseStats: function(statString, statsObject) {
+    /**
+     * Parses a single line of Pokemon data
+     */
+    parsePokemonLine(line, pokemon) {
+        if (line.startsWith('Ability: ')) {
+            pokemon.ability = line.substring(9).trim().toLowerCase().replace(/ /g, '');
+        }
+        else if (line.startsWith('Level: ')) {
+            const level = parseInt(line.substring(7));
+            if (level >= 1 && level <= 100) pokemon.level = level;
+        }
+        else if (line.startsWith('EVs: ')) {
+            this.parseStats(line.substring(5), pokemon.evs);
+        }
+        else if (line.startsWith('IVs: ')) {
+            this.parseStats(line.substring(5), pokemon.ivs);
+        }
+        else if (line.endsWith(' Nature')) {
+            pokemon.nature = line.split(' ')[0].toLowerCase();
+        }
+        else if (line.startsWith('- ')) {
+            pokemon.moveset.push(line.substring(2).toLowerCase().replace(/ /g, ''));
+        }
+        else if (line.toLowerCase().includes('shiny')) {
+            pokemon.shiny = true;
+        }
+        else if (line.startsWith('Gender: ')) {
+            pokemon.gender = line.substring(8).trim() === 'F' ? 'FEMALE' : 'MALE';
+        }
+    },
+
+    /**
+     * Parses stat values
+     */
+    parseStats(statString, statsObject) {
         statString.split('/').forEach(stat => {
-            const [value, statType] = stat.trim().split(' ');
+            const [value, type] = stat.trim().split(' ');
             const numericValue = parseInt(value);
-            const key = statType.toLowerCase();
+            const key = type.toLowerCase();
+            
             if (statsObject.hasOwnProperty(key)) {
                 statsObject[key] = numericValue;
             }
         });
     },
 
-    getErrorHint: function(errorMessage) {
+    /**
+     * Determines Pokemon gender based on species
+     */
+    determineGender(species, defaultGender) {
+        const baseSpecies = species.split('-')[0];
+        
+        if (this.cache.gender.genderless.has(baseSpecies)) {
+            return 'GENDERLESS';
+        }
+        if (this.cache.gender.femaleOnly.has(baseSpecies)) {
+            return 'FEMALE';
+        }
+        if (this.cache.gender.maleOnly.has(baseSpecies)) {
+            return 'MALE';
+        }
+
+        return defaultGender;
+    },
+
+    /**
+     * Generates a valid filename from trainer name
+     */
+    generateFilename(trainerName) {
+        return (trainerName || 'trainer')
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '_')
+            .replace(/-+/g, '_');
+    },
+
+    /**
+     * Returns helpful hints for common errors
+     */
+    getErrorHint(errorMessage) {
         const hints = {
-            "No Pokémon team data provided": "Ensure you've copied the entire Showdown format team. Each Pokémon should be separated by a blank line.",
-            "Unable to parse any Pokémon from the provided team data": "Check your input format. Make sure each Pokémon entry follows the Showdown format correctly.",
-            "No valid Pokémon species found in the entry": "Verify that each Pokémon entry starts with a valid species name."
+            "Converter not initialized": 
+                "Make sure to call initialize() before using the converter.",
+            "No Pokémon team data provided": 
+                "Ensure you've copied the entire Showdown format team. Each Pokémon should be separated by a blank line.",
+            "Unable to parse any Pokémon":
+                "Check your input format. Make sure each Pokémon entry follows the Showdown format correctly.",
+            "Empty Pokémon entry":
+                "Each Pokémon entry must contain at least a species name."
         };
         return hints[errorMessage] || "Please review your input and ensure it follows the Showdown format guidelines.";
     }
 };
+
+export default ShowdownConverter;
