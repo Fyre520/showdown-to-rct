@@ -1,0 +1,87 @@
+{
+    "format_version": 1,
+    "last_updated": "2024-01-14",
+    "description": "Pokemon with special naming rules that need specific handling",
+    "hyphenated_names": {
+        "description": "Pokemon whose base names contain hyphens",
+        "pokemon": [
+            "ho-oh",
+            "porygon-z",
+            "jangmo-o",
+            "hakamo-o",
+            "kommo-o",
+            "type-null",
+            "ting-lu",
+            "chien-pao",
+            "wo-chien",
+            "chi-yu",
+            "great-tusk",
+            "scream-tail",
+            "brute-bonnet",
+            "flutter-mane",
+            "slither-wing",
+            "sandy-shocks",
+            "iron-treads",
+            "iron-bundle",
+            "iron-hands",
+            "iron-jugulis",
+            "iron-moth",
+            "iron-thorns",
+            "iron-valiant",
+            "iron-leaves",
+            "iron-crown",
+            "roaring-moon",
+            "walking-wake",
+            "raging-bolt"
+        ]
+    },
+    "special_characters": {
+        "description": "Pokemon names that contain special characters or formatting",
+        "pokemon": [
+            {
+                "name": "farfetchd",
+                "showdown_formats": ["farfetch'd", "farfetchd"],
+                "correct_format": "farfetchd"
+            },
+            {
+                "name": "sirfetchd",
+                "showdown_formats": ["sirfetch'd", "sirfetchd"],
+                "correct_format": "sirfetchd"
+            },
+            {
+                "name": "mime-jr",
+                "showdown_formats": ["mime jr.", "mime-jr", "mime jr"],
+                "correct_format": "mime-jr"
+            },
+            {
+                "name": "mr-mime",
+                "showdown_formats": ["mr. mime", "mr-mime", "mr mime"],
+                "correct_format": "mr-mime"
+            },
+            {
+                "name": "mr-rime",
+                "showdown_formats": ["mr. rime", "mr-rime", "mr rime"],
+                "correct_format": "mr-rime"
+            }
+        ]
+    },
+    "compound_names": {
+        "description": "Pokemon with names that could be mistakenly split",
+        "pokemon": [
+            "tapukoko",
+            "tapulele",
+            "tapubulu",
+            "tapufini"
+        ]
+    },
+    "name_formatting_rules": {
+        "description": "Rules for handling special cases in name formatting",
+        "rules": [
+            "Remove all periods (.) from names",
+            "Convert spaces to hyphens in compound titles (Mr, Mrs, etc)",
+            "Remove apostrophes",
+            "Convert to lowercase",
+            "Remove spaces between compound names (Tapu Koko -> tapukoko)"
+        ]
+    }
+}

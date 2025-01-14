@@ -1,0 +1,108 @@
+{
+    "format_version": 1,
+    "last_updated": "2024-01-14",
+    "description": "Maps Pokemon to their available regional forms",
+    "alolan": {
+        "name": "alolan",
+        "description": "Alolan regional variants from Gen 7",
+        "pokemon": [
+            "rattata",
+            "raticate",
+            "raichu",
+            "sandshrew",
+            "sandslash",
+            "vulpix",
+            "ninetales",
+            "diglett",
+            "dugtrio",
+            "meowth",
+            "persian",
+            "geodude",
+            "graveler",
+            "golem",
+            "grimer",
+            "muk",
+            "exeggutor",
+            "marowak"
+        ]
+    },
+    "galarian": {
+        "name": "galarian",
+        "description": "Galarian regional variants from Gen 8",
+        "pokemon": [
+            "meowth",
+            "ponyta",
+            "rapidash",
+            "slowpoke",
+            "slowbro",
+            "slowking",
+            "farfetchd",
+            "weezing",
+            "mr-mime",
+            "articuno",
+            "zapdos",
+            "moltres",
+            "corsola",
+            "zigzagoon",
+            "linoone",
+            "darumaka",
+            "darmanitan",
+            "yamask",
+            "stunfisk"
+        ]
+    },
+    "hisuian": {
+        "name": "hisuian",
+        "description": "Hisuian regional variants from Gen 8 Legends",
+        "pokemon": [
+            "growlithe",
+            "arcanine",
+            "voltorb",
+            "electrode",
+            "typhlosion",
+            "qwilfish",
+            "sneasel",
+            "samurott",
+            "lilligant",
+            "zorua",
+            "zoroark",
+            "braviary",
+            "sliggoo",
+            "goodra",
+            "avalugg",
+            "decidueye"
+        ]
+    },
+    "paldean": {
+        "name": "paldean",
+        "description": "Paldean regional variants from Gen 9",
+        "pokemon": [
+            "tauros",
+            "wooper"
+        ]
+    },
+    "showdown_format_mappings": {
+        "description": "Maps different ways forms can be written in Showdown to standardized form names",
+        "mappings": {
+            "alola": "alolan",
+            "alolan": "alolan",
+            "galar": "galarian",
+            "galarian": "galarian",
+            "hisui": "hisuian",
+            "hisuian": "hisuian",
+            "paldea": "paldean",
+            "paldean": "paldean"
+        }
+    },
+    "special_cases": {
+        "description": "Pokemon with special form handling requirements",
+        "tauros_paldean": {
+            "description": "Paldean Tauros has three different breeds",
+            "breeds": [
+                "combat",
+                "blaze",
+                "aqua"
+            ]
+        }
+    }
+}

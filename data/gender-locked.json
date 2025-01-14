@@ -1,0 +1,60 @@
+{
+    "format_version": 1,
+    "last_updated": "2024-01-14",
+    "description": "List of Pokemon that are exclusively male or female",
+    "female_only": {
+        "description": "Pokemon that can only be female",
+        "pokemon": [
+            "nidoran-f",
+            "nidorina",
+            "nidoqueen",
+            "chansey",
+            "blissey",
+            "happiny",
+            "kangaskhan",
+            "jynx",
+            "smoochum",
+            "miltank",
+            "illumise",
+            "latias",
+            "froslass",
+            "petilil",
+            "lilligant",
+            "hisuian-lilligant",
+            "vullaby",
+            "mandibuzz",
+            "flabebe",
+            "floette",
+            "florges",
+            "salazzle",
+            "hatenna",
+            "hattrem",
+            "hatterene",
+            "enamorus"
+        ]
+    },
+    "male_only": {
+        "description": "Pokemon that can only be male",
+        "pokemon": [
+            "nidoran-m",
+            "nidorino",
+            "nidoking",
+            "hitmonlee",
+            "hitmonchan",
+            "hitmontop",
+            "tyrogue",
+            "volbeat",
+            "latios",
+            "gallade",
+            "rufflet",
+            "braviary",
+            "hisuian-braviary",
+            "impidimp",
+            "morgrem",
+            "grimmsnarl",
+            "basculegion-male",
+            "tauros",
+            "paldean-tauros"
+        ]
+    }
+}
