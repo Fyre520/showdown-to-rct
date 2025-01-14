@@ -1,4 +1,5 @@
-// Main application logic that handles UI interactions and initialization
+// File: app.js
+
 class App {
     constructor() {
         this.themeManager = new ThemeManager();
@@ -108,11 +109,8 @@ class App {
             if (result.success) {
                 document.getElementById('output').textContent = result.result;
                 this.highlightSuccessfulConversion();
-                
                 this.displayFilePath(result.path);
-                
                 this.displaySuccessMessage('Team converted successfully! Review the JSON and click "Download" when ready.');
-
                 document.getElementById('copy-output').style.display = 'inline-block';
                 document.getElementById('download-json').style.display = 'inline-block';
             } else {
@@ -131,7 +129,7 @@ class App {
         const outputText = document.getElementById('output').textContent;
         try {
             const jsonData = JSON.parse(outputText);
-            const filename = ShowdownConverter.generateTrainerFilename(jsonData.name);
+            const filename = ShowdownConverter.generateFilename(jsonData.name);
             const jsonString = JSON.stringify(jsonData, null, 2);
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
@@ -284,7 +282,6 @@ class App {
             name: document.getElementById('trainer-name').value,
             aiMargin: document.getElementById('ai-margin').value,
             battleFormat: document.getElementById('battle-format').value,
-            maxItems: document.getElementById('max-items').value,
             itemType: document.getElementById('item-type').value,
             itemQuantity: document.getElementById('item-quantity').value
         };
