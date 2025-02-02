@@ -1,0 +1,44 @@
+/* First, let's create a proper container for our main layout */
+.layout {
+    display: grid;
+    grid-template-columns: 1fr 300px;  /* This gives us our two-column layout */
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+/* Now let's make both sections the same height */
+.input-section, .trainer-config {
+    background-color: var(--card-bg);
+    padding: 20px;
+    border-radius: 5px;
+    /* This ensures both sections have the same height */
+    height: 100%;
+    /* Add a consistent box structure */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Style the textbox to fill available space */
+.input-section textarea {
+    /* Remove the previous height setting */
+    flex: 1;  /* This makes the textarea fill available space */
+    min-height: 200px;  /* Ensure minimum height */
+    margin: 10px 0;
+    resize: vertical;  /* Allow vertical resizing only */
+}
+
+/* Ensure form groups are properly spaced */
+.form-group {
+    margin-bottom: 15px;
+    /* Last form group shouldn't have margin */
+    &:last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* Add consistent header styling */
+.section-header {
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--textarea-border);
+}
