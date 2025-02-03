@@ -43,14 +43,20 @@ class App {
         document.getElementById('add-custom-item')?.addEventListener('click', () => {
             this.addCustomItem();
         });
+
+        // Add download JSON button handler
+        document.getElementById('download-json-button')?.addEventListener('click', () => {
+            this.downloadJSON();
+        });
     }
 
+    // Função para adicionar o item
     addItem() {
         const itemTypeSelect = document.getElementById('item-type');
         const itemType = itemTypeSelect ? itemTypeSelect.value : null;
         let customItem = null;
 
-        // If 'Other' is selected, get the custom item value
+        // Se 'Other' for selecionado, pega o valor do item customizado
         if (itemType === 'other') {
             const customItemInput = document.getElementById('custom-item');
             customItem = customItemInput ? customItemInput.value.trim() : '';
@@ -60,35 +66,25 @@ class App {
             }
         }
 
-        // If a valid item type is selected, add it to the list
-        if (itemType || customItem) {
-            // Ensure we are passing an object with item and quantity properties
-            const item = customItem ? { item: customItem, quantity: 1 } : { item: itemType, quantity: 1 };
-            this.addOrUpdateItem(item);
-        } else {
-            alert('Please select an item.');
-        }
+        // Adiciona o item na lista
+        const item = customItem ? { item: customItem, quantity: 1 } : { item: itemType, quantity: 1 };
+        this.addOrUpdateItem(item);
     }
 
-
-    // Check if the item already exists in the list, if so, increase the quantity
+    // Adiciona ou atualiza um item
     addOrUpdateItem(item) {
-        // Ensure the item is structured as { item: <item_name>, quantity: <quantity> }
         const existingItem = this.selectedItems.find(i => i.item === item.item);
 
         if (existingItem) {
-            // If item already exists, increase its quantity
-            existingItem.quantity++;
+            existingItem.quantity++;  // Aumenta a quantidade do item
         } else {
-            // If item doesn't exist, add it with quantity 1
-            this.selectedItems.push({ item: item.item, quantity: 1 });
+            this.selectedItems.push(item);  // Adiciona um novo item
         }
 
-        this.updateSelectedItemList();
+        this.updateSelectedItemList();  // Atualiza a lista de itens
     }
 
-
-
+    // Exibe ou oculta o input para item customizado
     toggleCustomItemInput(value) {
         const customItemContainer = document.getElementById('custom-item-container');
         if (customItemContainer) {
@@ -96,94 +92,71 @@ class App {
         }
     }
 
+    // Atualiza a lista de itens selecionados na UI
     updateSelectedItemList() {
         const listContainer = document.getElementById('selected-items-list');
         if (listContainer) {
-            listContainer.innerHTML = ''; // Clear previous list
+            listContainer.innerHTML = ''; // Limpa a lista
 
-            // Iterate through selectedItems to render each item
+            // Renderiza cada item na lista
             this.selectedItems.forEach(item => {
                 const listItem = document.createElement('li');
                 listItem.textContent = `${item.item} (x${item.quantity})`;
 
-                // Create buttons container
+                // Adiciona botões para cada item (Adicionar, Subtrair, Remover)
                 const buttonContainer = document.createElement('div');
                 buttonContainer.className = 'item-buttons';
 
-                // "+" Button
                 const addButton = document.createElement('button');
                 addButton.textContent = '+';
                 addButton.className = 'item-button add';
                 addButton.addEventListener('click', () => this.addItemQuantity(item.item));
 
-                // "-" Button
                 const subtractButton = document.createElement('button');
                 subtractButton.textContent = '-';
                 subtractButton.className = 'item-button subtract';
                 subtractButton.addEventListener('click', () => this.subtractItemQuantity(item.item));
 
-                // "Remove" Button
                 const removeButton = document.createElement('button');
                 removeButton.textContent = 'Remove';
                 removeButton.className = 'item-button remove';
                 removeButton.addEventListener('click', () => this.removeItem(item.item));
 
-                // Append buttons to button container
                 buttonContainer.appendChild(addButton);
                 buttonContainer.appendChild(subtractButton);
                 buttonContainer.appendChild(removeButton);
 
-                // Append button container to the list item
                 listItem.appendChild(buttonContainer);
-
-                // Add the item to the list
                 listContainer.appendChild(listItem);
             });
         }
     }
 
-
-
-    incrementItem(index) {
-        this.selectedItems[index].quantity++;
-        this.updateSelectedItemList();
-    }
-
-    decrementItem(index) {
-        if (this.selectedItems[index].quantity > 1) {
-            this.selectedItems[index].quantity--;
-        } else {
-            this.removeItem(index);
-        }
-        this.updateSelectedItemList();
-    }
-
+    // Funções para aumentar, diminuir a quantidade de um item ou removê-lo
     addItemQuantity(itemName) {
-        // Find the item in selectedItems and increase its quantity by 1
         const item = this.selectedItems.find(i => i.item === itemName);
         if (item) {
             item.quantity++;
-            this.updateSelectedItemList();  // Re-render the list with updated quantity
+            this.updateSelectedItemList();
         }
     }
 
     subtractItemQuantity(itemName) {
-        // Find the item in selectedItems and decrease its quantity by 1
         const item = this.selectedItems.find(i => i.item === itemName);
-        if (item && item.quantity > 1) {  // Ensure quantity doesn't go below 1
+        if (item && item.quantity > 1) {
             item.quantity--;
-            this.updateSelectedItemList();  // Re-render the list with updated quantity
+            this.updateSelectedItemList();
+        } else {
+            this.removeItem(itemName);
         }
-        else this.removeItem(itemName)
     }
 
     removeItem(itemName) {
-        // Find the item in selectedItems and remove it
         this.selectedItems = this.selectedItems.filter(i => i.item !== itemName);
-        this.updateSelectedItemList();  // Re-render the list after removal
+        this.updateSelectedItemList();
     }
 
-
+    // Função para gerenciar a conversão de texto
     handleConversion() {
         try {
             const input = document.getElementById('input')?.value;
@@ -205,10 +178,48 @@ class App {
         }
     }
 
+    // Função para baixar o JSON
+    downloadJSON() {
+        try {
+            // Obtém o texto de entrada (input) e a configuração do treinador
+            const input = document.getElementById('input')?.value;
+            const trainerConfig = this.getTrainerConfig();
+
+            // Verifica se o campo de entrada está vazio
+            if (!input) {
+                throw new Error('Input text is empty.');
+            }
+
+            // Chama a função de conversão passando a entrada e a configuração do treinador
+            const result = ShowdownConverter.convert(input, trainerConfig);
+
+            // Verifica se a conversão foi bem-sucedida
+            if (result.success) {
+                // O conteúdo do arquivo JSON será exatamente o resultado da conversão
+                const blob = new Blob([result.result], { type: 'application/json' });
+
+                // Cria o link de download
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'trainer_profile.json'; // Nome do arquivo JSON
+
+                // Dispara o download do arquivo
+                link.click();
+            } else {
+                // Em caso de erro na conversão, exibe a mensagem de erro
+                console.error('Error in conversion:', result.error);
+            }
+        } catch (error) {
+            console.error('Error generating JSON:', error.message);
+        }
+    }
+
+
+    // Função para obter a configuração do treinador
     getTrainerConfig() {
         const selectedItems = this.selectedItems.map(item => ({
-            item: item.item,  // Use item directly (not item.name)
-            quantity: item.quantity // Optionally add quantity if needed
+            item: item.item,
+            quantity: item.quantity
         }));
 
         const trainerNameInput = document.getElementById('trainer-name');
@@ -216,9 +227,11 @@ class App {
         const battleFormatInput = document.getElementById('battle-format');
         const maxItemsInput = document.getElementById('max-items');
         const itemQuantityInput = document.getElementById('item-quantity');
+        const trainerIdentityInput = document.getElementById('trainer-identity');
 
         return {
             name: trainerNameInput ? trainerNameInput.value : '',
+            identity: trainerIdentityInput ? trainerIdentityInput.value : '',
             aiMargin: aiMarginInput ? aiMarginInput.value : '',
             battleFormat: battleFormatInput ? battleFormatInput.value : '',
             maxItems: maxItemsInput ? maxItemsInput.value : '',
@@ -228,6 +241,7 @@ class App {
     }
 
 
+    // Função para atualizar o aviso sobre o comportamento da IA
     updateAIWarning(value) {
         const warning = document.getElementById('ai-warning');
         if (warning) {
@@ -241,13 +255,14 @@ class App {
         }
     }
 
+    // Função para adicionar um item customizado
     addCustomItem() {
         const customItemInput = document.getElementById('custom-item');
         if (customItemInput) {
             const customItemValue = customItemInput.value.trim();
             if (customItemValue) {
-                this.addOrUpdateItem(customItemValue); // Reuse the method to handle custom items
-                customItemInput.value = ''; // Clear input after adding
+                this.addOrUpdateItem({ item: customItemValue, quantity: 1 });
+                customItemInput.value = ''; // Limpa o input após adicionar
             }
         }
     }
