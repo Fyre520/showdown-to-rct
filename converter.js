@@ -10,6 +10,9 @@ const ShowdownConverter = {
                 // Use the provided trainer name or default to "Trainer"
                 name: trainerConfig.name || "Trainer",
 
+                // Only include identity if it's not empty
+                ...(trainerConfig.identity && { identity: trainerConfig.identity }),
+
                 // AI configuration - determines how the trainer makes decisions
                 ai: {
                     type: "rct",
@@ -47,7 +50,8 @@ const ShowdownConverter = {
                 error: error.message
             };
         }
-    },
+    }
+    ,
 
     // Build the bag (items) array from the trainer config, reflecting item quantity
     buildBag: function (itemTypes) {
@@ -88,19 +92,16 @@ const ShowdownConverter = {
     },
 
     // Parse a single Pokémon's text block into our required format
+    // Parse a single Pokémon's text block into our required format
     parseSinglePokemon: function (text) {
         const lines = text.split('\n').filter(line => line.trim());
         const pokemon = {
             species: '',
+            gender: '',
+            level: 50,
+            nature: '',
             ability: '',
-            evs: {
-                hp: 0,
-                atk: 0,
-                def: 0,
-                spa: 0,
-                spd: 0,
-                spe: 0
-            },
+            moveset: [],
             ivs: {
                 hp: 31,
                 atk: 31,
@@ -109,8 +110,17 @@ const ShowdownConverter = {
                 spd: 31,
                 spe: 31
             },
-            moveset: []
+            evs: {
+                hp: 0,
+                atk: 0,
+                def: 0,
+                spa: 0,
+                spd: 0,
+                spe: 0
+            },
         };
+
+        let levelFound = false;
 
         lines.forEach(line => {
             line = line.trim();
@@ -119,6 +129,7 @@ const ShowdownConverter = {
                 const parts = line.split('@');
                 const speciesData = this.processSpeciesName(parts[0].trim());
                 pokemon.species = speciesData.species;
+                pokemon.gender = speciesData.gender;
                 if (speciesData.aspects) {
                     pokemon.aspects = speciesData.aspects;
                 }
@@ -134,21 +145,42 @@ const ShowdownConverter = {
                 this.parseEVs(line.substring(5), pokemon);
             } else if (line.startsWith('IVs: ')) {
                 this.parseIVs(line.substring(5), pokemon);
-            } else if (line.endsWith(' Nature')) {
+            } else if (line.trim().endsWith(' Nature')) {
                 pokemon.nature = line.split(' ')[0].toLowerCase();
+            } else if (line.startsWith('Level: ')) {
+                pokemon.level = parseInt(line.substring(7).trim()); // Pega o número após "Level: "
+                levelFound = true;
             } else if (line.startsWith('- ')) {
                 pokemon.moveset.push(line.substring(2).toLowerCase().replace(/ /g, ''));
             }
         });
 
+        // Se o nível não for encontrado, ele já está com o valor default de 50
+        if (!levelFound) {
+            pokemon.level = 50;
+        }
+
         return pokemon;
     },
 
-    // Process a species name and handle any special forms
     processSpeciesName: function (name) {
-        const processedName = name.toLowerCase().trim();
-        const result = { species: processedName };
+        let processedName = name.toLowerCase().trim();
+        const result = {};
 
+        // Handle gender parsing and cleanup (supports uppercase as well)
+        if (processedName.match(/(\s\(\s?[m]\s?\)|-m)$/i)) {
+            processedName = processedName.replace(/(\s\(\s?[m]\s?\)|-m)$/i, '');
+            result.gender = "MALE";
+        } else if (processedName.match(/(\s\(\s?[f]\s?\)|-f)$/i)) {
+            processedName = processedName.replace(/(\s\(\s?[f]\s?\)|-f)$/i, '');
+            result.gender = "FEMALE";
+        } else {
+            result.gender = "GENDERLESS";
+        }
+
+        result.species = processedName;
+
+        // Handle regional forms (e.g., "alola", "galar", etc.)
         const regionalForms = {
             'alola': 'alolan',
             'galar': 'galarian',
@@ -160,12 +192,16 @@ const ShowdownConverter = {
             if (processedName.includes(`-${region}`)) {
                 result.species = processedName.replace(`-${region}`, '');
                 result.aspects = [aspect];
-                return result;
+                break;
             }
         }
 
         return result;
-    },
+    }
+
+
+    ,
+
 
     parseEVs: function (evString, pokemon) {
         evString.split('/').forEach(ev => {
